@@ -161,7 +161,7 @@ place(top + center, dy: -2.4cm ,
   rect(
     fill: HEPLColors.beige-super-pale,
     width: 140%,
-    height: 5.5cm + 0.3cm * calc.min(3, authors.len())
+    height: 5.5cm + 0.4cm * calc.min(3, authors.len())
   )
 )
 

@@ -47,3 +47,5 @@ Un serveur sera présent côté client de notre produit, et un second sera gér�
 Les deux serveurs seraient basés sur Rocky Linux en utilisant une architecture containerisée avec Docker.
 
 == Diagramme
+#set page(flipped: true)
+#figure(image("./figures/IOT-diagramme.jpg",width: 100%),)
