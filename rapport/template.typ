@@ -241,6 +241,7 @@ box(width: 100%,columns(2, gutter: 11pt)[
       rest
     }
   }
+  v(1.5cm)
   outline(indent: auto,title: "Table des matières")
   pagebreak()
   // Document main body.
