@@ -49,3 +49,12 @@ Les deux serveurs seraient basés sur Rocky Linux en utilisant une architecture 
 == Diagramme
 #set page(flipped: true)
 #figure(image("./figures/IOT-diagramme.jpg",width: 100%),)
+
+= Mise en place
+== ESP32 LORA
+== ESP32 WIFI
+== Serveurs
+La configuration des serveurs est réalisée en utilisant Docker Compose. Un fichier centrale docker-compose.yml est citué à la racine de l'utilisateur iot, les répertoire contenant les fichiers de configuration dans des dossiers spécifiques.
+=== Layer 2 : Nos serveurs chez le client
+
+=== Layer 3 : Nos serveurs dans notre datacenter
