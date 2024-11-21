@@ -1,68 +1,54 @@
 ## Compose sample application
-### Python/Flask application with Nginx proxy and a Mongo database
+### Python/Flask application
 
 Project structure:
 ```
 .
 ├── compose.yaml
-├── flask
-│   ├── Dockerfile
-│   ├── requirements.txt
-│   └── server.py
-└── nginx
-    └── nginx.conf
+├── app
+    ├── Dockerfile
+    ├── requirements.txt
+    └── app.py
 
 ```
 
 [_compose.yaml_](compose.yaml)
 ```
-services:
-  web:
-    build: app
-    ports:
-    - 80:80
-  backend:
-    build: flask
-    ...
-  mongo:
-    image: mongo
+services: 
+  web: 
+    build:
+     context: app
+     target: builder
+    ports: 
+      - '8000:8000'
 ```
-The compose file defines an application with three services `web`, `backend` and `db`.
-When deploying the application, docker compose maps port 80 of the web service container to port 80 of the host as specified in the file.
-Make sure port 80 on the host is not being used by another container, otherwise the port should be changed.
 
 ## Deploy with docker compose
 
 ```
 $ docker compose up -d
-Creating network "nginx-flask-mongo_default" with the default driver
-Pulling mongo (mongo:)...
-latest: Pulling from library/mongo
-423ae2b273f4: Pull complete
-...
-...
-Status: Downloaded newer image for nginx:latest
-Creating nginx-flask-mongo_mongo_1 ... done
-Creating nginx-flask-mongo_backend_1 ... done
-Creating nginx-flask-mongo_web_1     ... done
-
+[+] Building 1.1s (16/16) FINISHED
+ => [internal] load build definition from Dockerfile                                                                                                                                                                                       0.0s
+    ...                                                                                                                                         0.0s
+ => => naming to docker.io/library/flask_web                                                                                                                                                                                               0.0s
+[+] Running 2/2
+ ⠿ Network flask_default  Created                                                                                                                                                                                                          0.0s
+ ⠿ Container flask-web-1  Started
 ```
 
 ## Expected result
 
-Listing containers must show three containers running and the port mapping as below:
+Listing containers must show one container running and the port mapping as below:
 ```
-$ docker ps
-CONTAINER ID        IMAGE                        COMMAND                  CREATED             STATUS              PORTS                  NAMES
-a0f4ebe686ff        nginx                       "/bin/bash -c 'envsu…"   About a minute ago   Up About a minute   0.0.0.0:80->80/tcp     nginx-flask-mongo_web_1
-dba87a080821        nginx-flask-mongo_backend   "./server.py"            About a minute ago   Up About a minute                          nginx-flask-mongo_backend_1
-d7eea5481c77        mongo                       "docker-entrypoint.s…"   About a minute ago   Up About a minute   27017/tcp              nginx-flask-mongo_mongo_1
+$ docker compose ps
+NAME                COMMAND             SERVICE             STATUS              PORTS
+flask-web-1         "python3 app.py"    web                 running             0.0.0.0:8000->8000/tcp
 ```
 
-After the application starts, navigate to `http://localhost:80` in your web browser or run:
+After the application starts, navigate to `http://localhost:8000` in your web browser or run:
 ```
-$ curl localhost:80
-Hello from the MongoDB client!
+$ curl localhost:8000
+Hello World!
 ```
 
 Stop and remove the containers
