@@ -8,13 +8,12 @@ services:
       - '8000:8000'
     depends_on:
       - mosquitto-broker
-      - mongo
     environment:
       BROKER_IP: "mqtt-broker"  # Nom du service Docker pour le broker MQTT
       BROKER_PORT: "1883"       # Port MQTT
       MQTT_TOPIC: "HEPL/M18/test"
 
-      MONGO_IP: "mongoDB"
+      #MONGO_IP: "mongoDB"
       MONGO_PORT: "27017"
 
   mosquitto-broker:
