@@ -1,6 +1,26 @@
-version: "3.7"
-
 services:
+  web:
+    build:
+      context: app
+      target: builder
+    stop_signal: SIGINT # pour quitter flask correctement
+    container_name: python
+    ports:
+      - '8000:8000'
+    depends_on:
+      - mongo
+    environment:
+      MONGO_IP: "mongoDB" # Nom du service Docker pour mongo
+      MONGO_PORT: "27017"
+
+  mongo:
+    image: mongo:latest
+    container_name: mongoDB
+    ports:
+      - "27017:27017" # Port par défault de mongo
+    volumes:
+      - mongo-data:/data/db
+
   node-red:
     image: nodered/node-red:latest
     environment:
@@ -9,11 +29,14 @@ services:
       - "1880:1880"
     networks:
       - node-red-net
+    depends_on:
+      - mongo
     volumes:
       - node-red-data:/data
 
 volumes:
   node-red-data:
+  mongo-data:
 
 networks:
   node-red-net:
