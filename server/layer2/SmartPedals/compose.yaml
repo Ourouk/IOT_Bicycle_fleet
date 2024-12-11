@@ -2,7 +2,6 @@ services:
   web:
     build:
       context: app
-      target: builder
     container_name: python
     ports:
       - '8000:8000'
@@ -13,7 +12,7 @@ services:
       BROKER_PORT: "1883"       # Port MQTT
       MQTT_TOPIC: "HEPL/M18/test"
 
-      #MONGO_IP: "mongoDB"
+      MONGO_IP: "192.168.196.132"
       MONGO_PORT: "27017"
 
   mosquitto-broker:

@@ -2,7 +2,6 @@ services:
   web:
     build:
       context: app
-      target: builder
     stop_signal: SIGINT # pour quitter flask correctement
     container_name: python
     ports:
