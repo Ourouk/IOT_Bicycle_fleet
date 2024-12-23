@@ -1,73 +1,79 @@
 import os
-import pymongo
+import time
 import paho.mqtt.client as mqtt
+from pymongo import MongoClient
+from datetime import datetime
 
-def get_env_variable(var_name, default=None):
-    """Retrieve environment variables or return default."""
-    value = os.getenv(var_name, default)
-    if value is None:
-        raise EnvironmentError(f"Environment variable {var_name} is not set.")
-    return value
+# Configuration MQTT
+BROKER_IP = os.getenv("BROKER_IP", "localhost")
+BROKER_PORT = int(os.getenv("BROKER_PORT", 1883))
+MQTT_TOPIC = os.getenv("MQTT_TOPIC", "HEPL/M18/test")
 
-# Retrieve MongoDB connection details from environment variables
-mongo_host = get_env_variable("MONGO_HOST", "localhost")
-mongo_port = int(get_env_variable("MONGO_PORT", 27017))
-mongo_db = get_env_variable("MONGO_DB", "testdb")
-mongo_user = get_env_variable("MONGO_USER", None)
-mongo_password = get_env_variable("MONGO_PASSWORD", None)
+# Configuration MongoDB
+MONGO_IP = os.getenv("MONGO_IP", "localhost")
+MONGO_PORT = int(os.getenv("MONGO_PORT", 27017))
+DB_NAME = "iot_data"
+COLLECTION_NAME = "mqtt_messages"
 
-# Retrieve MQTT broker details from environment variables
-mqtt_broker = get_env_variable("MQTT_BROKER", "localhost")
-mqtt_port = int(get_env_variable("MQTT_PORT", 1883))
-mqtt_topic = get_env_variable("MQTT_TOPIC", "test/topic")
-mqtt_username = get_env_variable("MQTT_USERNAME", None)
-mqtt_password = get_env_variable("MQTT_PASSWORD", None)
-
-# Connect to MongoDB
-def connect_to_mongodb():
-    """Connect to MongoDB using pymongo."""
+# Fonction pour insérer un message dans MongoDB
+def insert_message_to_mongo(message):
     try:
-        if mongo_user and mongo_password:
-            uri = f"mongodb://{mongo_user}:{mongo_password}@{mongo_host}:{mongo_port}/{mongo_db}"
-        else:
-            uri = f"mongodb://{mongo_host}:{mongo_port}/{mongo_db}"
+        client = MongoClient(f"mongodb://{MONGO_IP}:{MONGO_PORT}")
+        db = client[DB_NAME]
+        collection = db[COLLECTION_NAME]
 
-        client = pymongo.MongoClient(uri)
-        db = client[mongo_db]
-        print("Connected to MongoDB successfully.")
-        return db
+        # Préparer le document à insérer
+        document = {
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "message": message
+        }
+
+        # Insérer dans MongoDB
+        collection.insert_one(document)
+        print(f"Message inséré dans MongoDB: {document}")
+
     except Exception as e:
-        print(f"Failed to connect to MongoDB: {e}")
-        raise
+        print(f"Erreur lors de l'insertion dans MongoDB: {e}")
 
-# MQTT callbacks
+# Callback lorsque le client se connecte au broker MQTT
 def on_connect(client, userdata, flags, rc):
-    """Callback for when the client receives a CONNACK response from the server."""
     if rc == 0:
-        print("Connected to MQTT Broker!")
-        client.subscribe(mqtt_topic)
+        print("Connecté au broker MQTT")
+        client.subscribe(MQTT_TOPIC)
     else:
-        print(f"Failed to connect, return code {rc}")
+        print(f"Erreur de connexion au broker MQTT, code: {rc}")
 
+# Callback lorsqu'un message est reçu
 def on_message(client, userdata, msg):
-    """Callback for when a PUBLISH message is received from the server."""
-    print(f"Received message from topic {msg.topic}: {msg.payload.decode()}")
+    print(f"Message reçu sur le topic {msg.topic}: {msg.payload.decode()}")
+    insert_message_to_mongo(msg.payload.decode())
 
-# Connect to MongoDB
-db = connect_to_mongodb()
+# Initialisation et connexion MQTT
+def main():
+    print("Initialisation du client MQTT...")
+    mqtt_client = mqtt.Client()
+    mqtt_client.on_connect = on_connect
+    mqtt_client.on_message = on_message
 
-# Connect to MQTT Broker
-mqtt_client = mqtt.Client()
+    try:
+        # Connexion au broker MQTT
+        mqtt_client.connect(BROKER_IP, BROKER_PORT, 60)
+    except Exception as e:
+        print(f"Erreur lors de la connexion au broker MQTT: {e}")
+        return
 
-# Set MQTT credentials if provided
-if mqtt_username and mqtt_password:
-    mqtt_client.username_pw_set(mqtt_username, mqtt_password)
+    # Démarrer la boucle pour écouter les messages MQTT
+    mqtt_client.loop_start()
 
-try:
-    mqtt_client.connect(mqtt_broker, mqtt_port)
-    mqtt_client.loop_forever()
-except Exception as e:
-    print(f"Failed to connect to MQTT Broker: {e}")
+    # Garder le script en vie
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("Arrêt du script...")
+    finally:
+        mqtt_client.loop_stop()
+        mqtt_client.disconnect()
 
-mqtt_client.on_connect = on_connect
-mqtt_client.on_message = on_message
+if __name__ == "__main__":
+    main()
