@@ -25,18 +25,28 @@ double txNumber;                // Counter for transmissions
 bool lora_idle = true;          // Indicates if LoRa is ready for a new transmission
 static RadioEvents_t RadioEvents; // Radio event handler structure
 
+// ========================== LoRa Message Configuration =================
+#define LoRa_GPS_Interval 60000 // Interval to send GPS data in ms
+#define LoRa_Lock_Status_EventDriven true // Send lock status only when changed
+#define LoRa_Lock_Status_Interval 300000 // Interval to send lock status in ms ONLY USED IF LoRa_Lock_Status_EventDriven IS FALSE
+// Associated var
+unsigned long lastLoRaGpsTime = 0; // Last time GPS data was sent via LoRa
+unsigned long lastLoRaLockStatusTime = 0; // Last time lock status was sent
+
 // ========================== GPS Configuration ==========================
 #define BAUD 9600               // Baud rate for GPS communication
 #define RXPIN 33                 // GPS RX pin (data from GPS module)
 #define TXPIN 34                 // GPS TX pin (data to GPS module)
+#define GPS_CHECK_INTERVAL 5000 // Interval to check GPS data in ms
 TinyGPSPlus gps;                // GPS object from TinyGPS++ library
 bool gpsDataAvailable = false;  // Flag to indicate GPS fix availability
+bool gpsDataReceived = false;   // Flag to indicate if GPS data was received
+static unsigned long lastGpsDataTime = 0; // Last time GPS data was received
+static unsigned long lastGpsLineTime = 0;  // Last time had a GPS full line
 // Debugs wrong wirings or faulty GPS modules
 // If no GPS data received for more than 5 seconds, print debug message every 5
-static unsigned long lastGpsDataTime = 0;
-static unsigned long lastDebugTime = 0;
-static unsigned long lastGpsFixTime = 0;
-bool gpsDataReceived = false;
+static unsigned long lastDebugTime = 0; // Last time debug message was printed
+
 // ========================== RFID Configuration ==========================
 #define RXPINRFID 1             // RFID RX pin
 #define TXPINRFID 38            // RFID TX pin
@@ -107,17 +117,20 @@ void setup() {
   delay(1000); //Allow all components to initialize properly
 }
 
+
+
+// ========================== Entering Main Loop ==========================
 void loop() {
   // ========================== LoRa Processing ==========================
   Radio.IrqProcess();  // Handle LoRa IRQ events (e.g., TX done, RX received)
 
   // ========================== GPS Data Processing ==========================
   gpsDataReceived = false; // Reset GPS data received flag
-
-  if(millis() - lastGpsFixTime > 5000)
+  // GPS Serial data reading
+  if(millis() - lastGpsLineTime > GPS_CHECK_INTERVAL)
   {
     while (Serial1.available() > 0) // Check if GPS sent new data
-    { 
+    {
       if(Serial1.peek()!='\n')
       {
         gps.encode(Serial1.read());
@@ -132,18 +145,38 @@ void loop() {
             continue;
           }
         isGpsDataAvailable();  // Update GPS fix status
-        lastGpsFixTime = millis();
+        lastGpsLineTime = millis();
         break;
       }
     }
+    // If GPS Serial received no data for more than 20 seconds.
+    if (!gpsDataReceived && (millis() - lastGpsDataTime) > 20000 && (millis() - lastDebugTime) > 20000) {
+        Serial.println("Warning: No GPS data received for over 20 seconds.");
+        lastDebugTime = millis();
+    }
+    // ========================== LoRa GPS Transmission ==========================
+    if (millis() - lastLoRaGpsTime > LoRa_GPS_Interval && gpsDataAvailable && lora_idle) // Check if it's time to send GPS data
+    {
+      putGpsData2txpacket(); // Format GPS data into packet
+      Serial.println("Sending GPS data via LoRa...");
+      //Print uncrypted packet for debugging
+      Serial.print("Unencrypted packet: ");
+      Serial.println(txpacket);
+      // Encrypt the packet using AES
+      aes_encrypt((const uint8_t *)txpacket, strlen(txpacket), (uint8_t *)txpacket); // Encrypt packet
+      Serial.print("Encrypted packet: ");
+      // Print encrypted packet for debugging
+      for (size_t i = 0; i < strlen(txpacket); i++) {
+        Serial.print(txpacket[i], HEX);
+        Serial.print(" ");
+      }
+      Serial.println();
+      Radio.Send((uint8_t *)txpacket, strlen(txpacket)); // Transmit packet
+      lora_idle = false; // Mark LoRa as busy
+      txNumber += 0.01; // Increment transmission counter
+      lastLoRaGpsTime = millis(); // Update last GPS transmission time
+    }
   }
-
-  // If no GPS data received for more than 20 seconds, print debug message every 20 seconds
-  if (!gpsDataReceived && (millis() - lastGpsDataTime) > 20000 && (millis() - lastDebugTime) > 20000) {
-      Serial.println("Warning: No GPS data received for over 20 seconds.");
-      lastDebugTime = millis();
-  }
-
   // ========================== RFID Processing ==========================
   while (Serial2.available()) {     // Check if RFID scanner sent data
     char c = Serial2.read();
@@ -160,18 +193,7 @@ void loop() {
       }
       rfid = ""; // Clear buffer for next scan
     }
-    delay(50); // Small delay to avoid overwhelming the serial buffer and the processor
   }
-
-  // ========================== LoRa GPS Transmission ==========================
-  if (gpsDataAvailable && lora_idle) { // Send GPS data if fix acquired and LoRa is idle
-    putGpsData2txpacket();             // Format GPS data into packet
-    Serial.println("LoRa idle, sending GPS data...");
-    Radio.Send((uint8_t *)txpacket, strlen(txpacket)); // Transmit packet
-    lora_idle = false;                 // Mark LoRa as busy
-    txNumber += 0.01;                  // Increment transmission count
-  }
-
   // ========================== Lighting & Relay Control ==========================
   int lightLevel = readSmoothedLightLevel(); // Read smoothed light level
 
@@ -190,8 +212,16 @@ void loop() {
       digitalWrite(BUZZERPIN, LOW);
     }
   }
-}
 
+  delay(50); // Small delay to avoid overwhelming the serial buffer and the processor
+}
+// ========================== Quitting Main Loop ==========================
+
+
+
+
+
+// ========================= Entering Functions Definitions ===============
 // Function to read and smooth light level using moving average
 int readSmoothedLightLevel() {
   sumReadings -= lightReadings[currentIndex]; // Subtract the oldest reading
@@ -220,6 +250,7 @@ void aes_encrypt(const uint8_t *input, size_t length, uint8_t *output) {
     mbedtls_aes_crypt_ecb(&aes, MBEDTLS_AES_ENCRYPT, buf + i, output + i);
   }
   mbedtls_aes_free(&aes);
+
 }
 
 void OnTxDone(void) {
