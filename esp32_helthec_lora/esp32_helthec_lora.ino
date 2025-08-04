@@ -155,25 +155,30 @@ void loop() {
         lastDebugTime = millis();
     }
     // ========================== LoRa GPS Transmission ==========================
-    if (millis() - lastLoRaGpsTime > LoRa_GPS_Interval && gpsDataAvailable && lora_idle) // Check if it's time to send GPS data
-    {
-      putGpsData2txpacket(); // Format GPS data into packet
-      Serial.println("Sending GPS data via LoRa...");
-      //Print uncrypted packet for debugging
-      Serial.print("Unencrypted packet: ");
-      Serial.println(txpacket);
-      // Encrypt the packet using AES
-      aes_encrypt((const uint8_t *)txpacket, strlen(txpacket), (uint8_t *)txpacket); // Encrypt packet
-      Serial.print("Encrypted packet: ");
-      // Print encrypted packet for debugging
-      for (size_t i = 0; i < strlen(txpacket); i++) {
-        Serial.print(txpacket[i], HEX);
-        Serial.print(" ");
-      }
-      Serial.println();
-      Radio.Send((uint8_t *)txpacket, strlen(txpacket)); // Transmit packet
-      lora_idle = false; // Mark LoRa as busy
-      txNumber += 0.01; // Increment transmission counter
+    // if (millis() - lastLoRaGpsTime > LoRa_GPS_Interval && gpsDataAvailable && lora_idle) // Check if it's time to send GPS data
+    // {
+    //   putGpsData2txpacket(); // Format GPS data into packet
+    //   Serial.println("Sending GPS data via LoRa...");
+    //   //Print uncrypted packet for debugging
+    //   Serial.print("Unencrypted packet: ");
+    //   Serial.println(txpacket);
+    //   // Encrypt the packet using AES
+    //   aes_encrypt((const uint8_t *)txpacket, strlen(txpacket), (uint8_t *)txpacket); // Encrypt packet
+    //   Serial.print("Encrypted packet: ");
+    //   // Print encrypted packet for debugging
+    //   for (size_t i = 0; i < strlen(txpacket); i++) {
+    //     Serial.print(txpacket[i], HEX);
+    //     Serial.print(" ");
+    //   }
+    //   Serial.println();
+    //   lora_idle = false; // Mark LoRa as busy
+    //   Radio.Send((uint8_t *)txpacket, strlen(txpacket)); // Transmit packet
+    //   txNumber += 0.01; // Increment transmission counter
+    //   lastLoRaGpsTime = millis(); // Update last GPS transmission time
+    // }
+    //TEST: Use the alternative function to send GPS data
+    if( millis() - lastLoRaGpsTime > LoRa_GPS_Interval && gpsDataAvailable && lora_idle) {
+      sendLoRaData(putGpsData2txpacket); // Send GPS data via LoRa
       lastLoRaGpsTime = millis(); // Update last GPS transmission time
     }
   }
@@ -232,7 +237,114 @@ int readSmoothedLightLevel() {
   return sumReadings / MOVING_AVG_WINDOW; // Return the average
 }
 
-// ========================== LoRa ================================
+
+// ========================== GPS Utilities ==========================
+void isGpsDataAvailable() {
+  if (gps.location.isValid()) { // Check if GPS has a valid fix
+    gpsDataAvailable = true;
+    Serial.println("GPS: Fix acquired");
+  } else {
+    gpsDataAvailable = false; //Permit to decide if a localisation need to be sent
+    Serial.print("GPS: ");
+    Serial.print(gps.satellites.value());
+    Serial.println(" satellite(s), no fix acquired");
+  }
+}
+// ========================== Lora Event Handlers ===========================
+void OnTxDone(void) {
+  Serial.println("TX done...");
+  lora_idle = true; // Mark LoRa as ready for next transmission
+}
+
+void OnTxTimeout(void) {
+  Radio.Sleep(); // Put LoRa radio to sleep on timeout
+  Serial.println("TX timeout...");
+  lora_idle = true;
+}
+// ========================== Lora Sending/Receiving Functions ==========================
+// Function to send data via LoRa (Use as parameter the function to call to format the packet)
+void sendLoRaData(void (*formatPacket)()) {
+  if (lora_idle) { // Check if LoRa is ready for transmission
+    formatPacket(); // Call the provided function to format the packet
+    Serial.print("Sending packet: ");
+    Serial.println(txpacket); // Print the packet to be sent
+    aes_encrypt((const uint8_t *)txpacket, strlen(txpacket), (uint8_t *)txpacket); // Encrypt the packet
+    Serial.print("Encrypted packet: ");
+    for (size_t i = 0; i < strlen(txpacket); i++) {
+      Serial.print(txpacket[i], HEX);
+      Serial.print(" ");
+    }
+    Serial.println();
+    lora_idle = false; // Mark LoRa as busy
+    Radio.Send((uint8_t *)txpacket, strlen(txpacket)); // Send the packet
+  } else {
+    Serial.println("LoRa is busy, cannot send data.");
+  }
+}
+// Function to receive data via LoRa
+void receiveLoRaData(void (*processPacket)()) {
+  if (Radio.RxDone()) { // Check if a packet was received
+    int packetSize = Radio.GetRxPacketSize(); // Get the size of the received packet
+    if (packetSize > 0 && packetSize < BUFFER_SIZE) { // Ensure packet size is valid
+      Radio.Read(rxpacket, packetSize); // Read the received packet into buffer
+      rxpacket[packetSize] = '\0'; // Null-terminate the string
+      Serial.print("Received packet: ");
+      Serial.println(rxpacket); // Print the received packet
+      // Decrypt the received packet using AES
+      uint8_t decryptedPacket[BUFFER_SIZE];
+      aes_decrypt((const uint8_t *)rxpacket, packetSize, decryptedPacket);
+      decryptedPacket[packetSize] = '\0'; // Null-terminate the decrypted string
+      Serial.print("Decrypted packet: ");
+      for (size_t i = 0; i < packetSize; i++) {
+        Serial.print(decryptedPacket[i], HEX);
+        Serial.print(" ");
+      }
+      Serial.println();
+      // Process the decrypted packet (e.g., parse GPS data, lock status)
+      //TODO: Implement packet processing logic here
+      if (processPacket) {
+        processPacket(); // Call the provided function to process the packet
+      } else {
+        Serial.println("No packet processing function provided.");
+      }
+    } else {
+      Serial.println("Received packet size is invalid.");
+    }
+  } else {
+    Serial.println("No packet received.");
+  }
+}
+// ========================== LoRa Packet Formatting ==========================
+// Format GPS data into LoRa packet for transmission
+void putGpsData2txpacket() {
+  if (gps.location.isValid()) { // If GPS fix valid, include coordinates
+    sprintf(txpacket, "GPS,%d,%.6f,%.6f,%d,%02d/%02d/%02d,%02d:%02d:%02d",
+            BIKE_ID,
+            gps.location.lat(),
+            gps.location.lng(),
+            gps.satellites.value(),
+            gps.date.month(), gps.date.day(), gps.date.year(),
+            gps.time.hour(), gps.time.minute(), gps.time.second());
+  } else { // If no GPS fix, send placeholders
+    sprintf(txpacket, "GPS,%d,N/A,N/A,N/A,N/A,N/A,N/A", BIKE_ID);
+  }
+}
+
+void putLockStatus2txpacket() {
+  // Decode user ID from RFID tag
+  //Using Wiegand format, first 8 chars are user ID
+  String user_id = lastscannedrfid.substring(0, 8);
+  if (user_id.length() < 8) {
+    // If user ID is less than 8 chars, pad with spaces
+    user_id += String(' ', 8 - user_id.length());
+  }
+  // Format lock status into LoRa packet
+  sprintf(txpacket, "LOCK,%d,%s,%s", BIKE_ID, user_id.c_str(), identified ? "UNLOCKED" : "LOCKED");
+}
+
+// Encrypption function using AES
+// Uses mbedTLS library for AES encryption
+// Pads input to multiple of 16 bytes using PKCS7 padding
 void aes_encrypt(const uint8_t *input, size_t length, uint8_t *output) {
   mbedtls_aes_context aes;
   mbedtls_aes_init(&aes);
@@ -250,44 +362,24 @@ void aes_encrypt(const uint8_t *input, size_t length, uint8_t *output) {
     mbedtls_aes_crypt_ecb(&aes, MBEDTLS_AES_ENCRYPT, buf + i, output + i);
   }
   mbedtls_aes_free(&aes);
-
 }
-
-void OnTxDone(void) {
-  Serial.println("TX done...");
-  lora_idle = true; // Mark LoRa as ready for next transmission
-}
-
-void OnTxTimeout(void) {
-  Radio.Sleep(); // Put LoRa radio to sleep on timeout
-  Serial.println("TX timeout...");
-  lora_idle = true;
-}
-
-// ========================== GPS Utilities ==========================
-void isGpsDataAvailable() {
-  if (gps.location.isValid()) { // Check if GPS has a valid fix
-    gpsDataAvailable = true;
-    Serial.println("GPS: Fix acquired");
-  } else {
-    gpsDataAvailable = false; //Permit to decide if a localisation need to be sent
-    Serial.print("GPS: ");
-    Serial.print(gps.satellites.value());
-    Serial.println(" satellite(s), no fix acquired");
+// Decrypt function using AES
+// Uses mbedTLS library for AES decryption
+// Assumes input is padded with PKCS7 padding
+// Removes padding after decryption
+void aes_decrypt(const uint8_t *input, size_t length, uint8_t *output) {
+  mbedtls_aes_context aes;
+  mbedtls_aes_init(&aes);
+  mbedtls_aes_setkey_dec(&aes, aes_key, 128);
+  // Decrypt each 16-byte block
+  for (size_t i = 0; i < length; i += 16) {
+    mbedtls_aes_crypt_ecb(&aes, MBEDTLS_AES_DECRYPT, input + i, output + i);
   }
-}
-
-// Format GPS data into LoRa packet for transmission
-void putGpsData2txpacket() {
-  if (gps.location.isValid()) { // If GPS fix valid, include coordinates
-    sprintf(txpacket, "GPS,%d,%.6f,%.6f,%d,%02d/%02d/%02d,%02d:%02d:%02d",
-            BIKE_ID,
-            gps.location.lat(),
-            gps.location.lng(),
-            gps.satellites.value(),
-            gps.date.month(), gps.date.day(), gps.date.year(),
-            gps.time.hour(), gps.time.minute(), gps.time.second());
-  } else { // If no GPS fix, send placeholders
-    sprintf(txpacket, "GPS,%d,N/A,N/A,N/A,N/A,N/A,N/A", BIKE_ID);
+  // Remove PKCS7 padding
+  size_t pad = output[length - 1];
+  if (pad > 0 && pad <= 16) {
+    output[length - pad] = '\0'; // Null-terminate the string
   }
+  mbedtls_aes_free(&aes);
 }
+// ========================== End of Functions Definitions ===============
