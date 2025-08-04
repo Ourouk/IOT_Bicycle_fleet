@@ -27,11 +27,16 @@ static RadioEvents_t RadioEvents; // Radio event handler structure
 
 // ========================== GPS Configuration ==========================
 #define BAUD 9600               // Baud rate for GPS communication
-#define RXPIN 4                 // GPS RX pin (data from GPS module)
-#define TXPIN 5                 // GPS TX pin (data to GPS module)
+#define RXPIN 33                 // GPS RX pin (data from GPS module)
+#define TXPIN 34                 // GPS TX pin (data to GPS module)
 TinyGPSPlus gps;                // GPS object from TinyGPS++ library
 bool gpsDataAvailable = false;  // Flag to indicate GPS fix availability
-
+// Debugs wrong wirings or faulty GPS modules
+// If no GPS data received for more than 5 seconds, print debug message every 5
+static unsigned long lastGpsDataTime = 0;
+static unsigned long lastDebugTime = 0;
+static unsigned long lastGpsFixTime = 0;
+bool gpsDataReceived = false;
 // ========================== RFID Configuration ==========================
 #define RXPINRFID 1             // RFID RX pin
 #define TXPINRFID 38            // RFID TX pin
@@ -68,7 +73,7 @@ int readSmoothedLightLevel();
 
 void setup() {
   // Initialize debug serial monitor
-  Serial.begin(9600);
+  Serial.begin(115200);
 
   // Initialize GPS (Serial1) and RFID (Serial2) serial ports
   Serial1.begin(BAUD, SERIAL_8N1, RXPIN, TXPIN);
@@ -99,6 +104,7 @@ void setup() {
   for (int i = 0; i < MOVING_AVG_WINDOW; i++) {
     lightReadings[i] = 0;
   }
+  delay(1000); //Allow all components to initialize properly
 }
 
 void loop() {
@@ -106,10 +112,36 @@ void loop() {
   Radio.IrqProcess();  // Handle LoRa IRQ events (e.g., TX done, RX received)
 
   // ========================== GPS Data Processing ==========================
-  while (Serial1.available() > 0) { // Check if GPS sent new data
-    if (gps.encode(Serial1.read()) && gps.location.isUpdated()) {
-      isGpsDataAvailable();  // Update GPS fix status
+  gpsDataReceived = false; // Reset GPS data received flag
+
+  if(millis() - lastGpsFixTime > 5000)
+  {
+    while (Serial1.available() > 0) // Check if GPS sent new data
+    { 
+      if(Serial1.peek()!='\n')
+      {
+        gps.encode(Serial1.read());
+        gpsDataReceived = true; // Doesn't matter if GPS data is valid or not, we received data
+        lastGpsDataTime = millis();
+      }
+      else
+      {
+        Serial1.read(); // Read and discard newline character
+          if(gps.time.second()==0)
+          {
+            continue;
+          }
+        isGpsDataAvailable();  // Update GPS fix status
+        lastGpsFixTime = millis();
+        break;
+      }
     }
+  }
+
+  // If no GPS data received for more than 20 seconds, print debug message every 20 seconds
+  if (!gpsDataReceived && (millis() - lastGpsDataTime) > 20000 && (millis() - lastDebugTime) > 20000) {
+      Serial.println("Warning: No GPS data received for over 20 seconds.");
+      lastDebugTime = millis();
   }
 
   // ========================== RFID Processing ==========================
@@ -128,6 +160,7 @@ void loop() {
       }
       rfid = ""; // Clear buffer for next scan
     }
+    delay(50); // Small delay to avoid overwhelming the serial buffer and the processor
   }
 
   // ========================== LoRa GPS Transmission ==========================
@@ -204,10 +237,12 @@ void OnTxTimeout(void) {
 void isGpsDataAvailable() {
   if (gps.location.isValid()) { // Check if GPS has a valid fix
     gpsDataAvailable = true;
-    Serial.println("GPS fix acquired");
+    Serial.println("GPS: Fix acquired");
   } else {
-    gpsDataAvailable = false;
-    Serial.println("No GPS fix");
+    gpsDataAvailable = false; //Permit to decide if a localisation need to be sent
+    Serial.print("GPS: ");
+    Serial.print(gps.satellites.value());
+    Serial.println(" satellite(s), no fix acquired");
   }
 }
 
