@@ -154,29 +154,7 @@ void loop() {
         Serial.println("Warning: No GPS data received for over 20 seconds.");
         lastDebugTime = millis();
     }
-    // ========================== LoRa GPS Transmission ==========================
-    // if (millis() - lastLoRaGpsTime > LoRa_GPS_Interval && gpsDataAvailable && lora_idle) // Check if it's time to send GPS data
-    // {
-    //   putGpsData2txpacket(); // Format GPS data into packet
-    //   Serial.println("Sending GPS data via LoRa...");
-    //   //Print uncrypted packet for debugging
-    //   Serial.print("Unencrypted packet: ");
-    //   Serial.println(txpacket);
-    //   // Encrypt the packet using AES
-    //   aes_encrypt((const uint8_t *)txpacket, strlen(txpacket), (uint8_t *)txpacket); // Encrypt packet
-    //   Serial.print("Encrypted packet: ");
-    //   // Print encrypted packet for debugging
-    //   for (size_t i = 0; i < strlen(txpacket); i++) {
-    //     Serial.print(txpacket[i], HEX);
-    //     Serial.print(" ");
-    //   }
-    //   Serial.println();
-    //   lora_idle = false; // Mark LoRa as busy
-    //   Radio.Send((uint8_t *)txpacket, strlen(txpacket)); // Transmit packet
-    //   txNumber += 0.01; // Increment transmission counter
-    //   lastLoRaGpsTime = millis(); // Update last GPS transmission time
-    // }
-    //TEST: Use the alternative function to send GPS data
+    // LoRa GPS data sending
     if( millis() - lastLoRaGpsTime > LoRa_GPS_Interval && gpsDataAvailable && lora_idle) {
       sendLoRaData(putGpsData2txpacket); // Send GPS data via LoRa
       lastLoRaGpsTime = millis(); // Update last GPS transmission time
@@ -282,38 +260,38 @@ void sendLoRaData(void (*formatPacket)()) {
   }
 }
 // Function to receive data via LoRa
-void receiveLoRaData(void (*processPacket)()) {
-  if (Radio.RxDone()) { // Check if a packet was received
-    int packetSize = Radio.GetRxPacketSize(); // Get the size of the received packet
-    if (packetSize > 0 && packetSize < BUFFER_SIZE) { // Ensure packet size is valid
-      Radio.Read(rxpacket, packetSize); // Read the received packet into buffer
-      rxpacket[packetSize] = '\0'; // Null-terminate the string
-      Serial.print("Received packet: ");
-      Serial.println(rxpacket); // Print the received packet
-      // Decrypt the received packet using AES
-      uint8_t decryptedPacket[BUFFER_SIZE];
-      aes_decrypt((const uint8_t *)rxpacket, packetSize, decryptedPacket);
-      decryptedPacket[packetSize] = '\0'; // Null-terminate the decrypted string
-      Serial.print("Decrypted packet: ");
-      for (size_t i = 0; i < packetSize; i++) {
-        Serial.print(decryptedPacket[i], HEX);
-        Serial.print(" ");
-      }
-      Serial.println();
-      // Process the decrypted packet (e.g., parse GPS data, lock status)
-      //TODO: Implement packet processing logic here
-      if (processPacket) {
-        processPacket(); // Call the provided function to process the packet
-      } else {
-        Serial.println("No packet processing function provided.");
-      }
-    } else {
-      Serial.println("Received packet size is invalid.");
-    }
-  } else {
-    Serial.println("No packet received.");
-  }
-}
+// void receiveLoRaData(void (*processPacket)()) {
+//   if (Radio.RxDone()) { // Check if a packet was received
+//     int packetSize = Radio.GetRxPacketSize(); // Get the size of the received packet
+//     if (packetSize > 0 && packetSize < BUFFER_SIZE) { // Ensure packet size is valid
+//       Radio.Read(rxpacket, packetSize); // Read the received packet into buffer
+//       rxpacket[packetSize] = '\0'; // Null-terminate the string
+//       Serial.print("Received packet: ");
+//       Serial.println(rxpacket); // Print the received packet
+//       // Decrypt the received packet using AES
+//       uint8_t decryptedPacket[BUFFER_SIZE];
+//       aes_decrypt((const uint8_t *)rxpacket, packetSize, decryptedPacket);
+//       decryptedPacket[packetSize] = '\0'; // Null-terminate the decrypted string
+//       Serial.print("Decrypted packet: ");
+//       for (size_t i = 0; i < packetSize; i++) {
+//         Serial.print(decryptedPacket[i], HEX);
+//         Serial.print(" ");
+//       }
+//       Serial.println();
+//       // Process the decrypted packet (e.g., parse GPS data, lock status)
+//       //TODO: Implement packet processing logic here
+//       if (processPacket) {
+//         processPacket(); // Call the provided function to process the packet
+//       } else {
+//         Serial.println("No packet processing function provided.");
+//       }
+//     } else {
+//       Serial.println("Received packet size is invalid.");
+//     }
+//   } else {
+//     Serial.println("No packet received.");
+//   }
+// }
 // ========================== LoRa Packet Formatting ==========================
 // Format GPS data into LoRa packet for transmission
 void putGpsData2txpacket() {
@@ -336,7 +314,7 @@ void putLockStatus2txpacket() {
   String user_id = lastscannedrfid.substring(0, 8);
   if (user_id.length() < 8) {
     // If user ID is less than 8 chars, pad with spaces
-    user_id += String(' ', 8 - user_id.length());
+    user_id += String(8 - user_id.length(), ' ');
   }
   // Format lock status into LoRa packet
   sprintf(txpacket, "LOCK,%d,%s,%s", BIKE_ID, user_id.c_str(), identified ? "UNLOCKED" : "LOCKED");
