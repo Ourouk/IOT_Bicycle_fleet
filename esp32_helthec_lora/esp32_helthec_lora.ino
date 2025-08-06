@@ -16,12 +16,12 @@
 #define LORA_FIX_LENGTH_PAYLOAD_ON false // Variable-length payload
 #define LORA_IQ_INVERSION_ON false        // No IQ inversion
 #define RX_TIMEOUT_VALUE 1000    // Timeout for RX in ms
+#define RX_REPEAT_NUMBER 5    // Number of RX repeats
 #define BUFFER_SIZE 256          // Packet buffer size
 
 // Buffers for sending/receiving LoRa data
 char txpacket[BUFFER_SIZE];
 char rxpacket[BUFFER_SIZE];
-double txNumber;                // Counter for transmissions
 bool lora_idle = true;          // Indicates if LoRa is ready for a new transmission
 static RadioEvents_t RadioEvents; // Radio event handler structure
 
@@ -33,6 +33,7 @@ static RadioEvents_t RadioEvents; // Radio event handler structure
 unsigned long lastLoRaGpsTime = 0; // Last time GPS data was sent via LoRa
 unsigned long lastLoRaLockStatusTime = 0; // Last time lock status was sent
 
+// 
 // ========================== GPS Configuration ==========================
 #define BAUD 9600               // Baud rate for GPS communication
 #define RXPIN 33                 // GPS RX pin (data from GPS module)
@@ -75,11 +76,24 @@ const unsigned char aes_key[16] = {
 };
 
 // Function declarations
-void OnTxDone(void);
-void OnTxTimeout(void);
+void OnTxDone(void); // Callback on successful transmission
+void OnTxTimeout(void); // Callback on transmission timeout
+void OnRxDone(uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr); // Callback on received data
+void OnRxTimeout(void); // Callback on reception timeout
+// Function to manage LoRa data
+void sendLoRaData(void *);
+void receivedLoRaData();
+// Function to format data from/for LoRa packet
 void putGpsData2txpacket();
 void isGpsDataAvailable();
 int readSmoothedLightLevel();
+void receivedLoRaData();
+bool gotValidResponse;
+// Crypto
+void aes_encrypt(const uint8_t*, size_t, uint8_t*, size_t*);
+void aes_decrypt(const uint8_t*, size_t, uint8_t*, size_t*);
+
+
 
 void setup() {
   // Initialize debug serial monitor
@@ -90,16 +104,20 @@ void setup() {
   Serial2.begin(BAUD, SERIAL_8N1, RXPINRFID, TXPINRFID);
 
   // ========================== LoRa Setup ==========================
-  Mcu.begin(HELTEC_BOARD, SLOW_CLK_TPYE);         // Initialize Heltec MCU
-  txNumber = 0;                                   // Reset transmission counter
+  Mcu.begin(HELTEC_BOARD, SLOW_CLK_TPYE);         // Initialize Heltec MCU on slow clock for power saving
   RadioEvents.TxDone = OnTxDone;                  // Callback on successful transmission
   RadioEvents.TxTimeout = OnTxTimeout;            // Callback on transmission timeout
+  RadioEvents.RxDone = OnRxDone;                  // Callback on received data
   Radio.Init(&RadioEvents);                       // Initialize LoRa radio with events
   Radio.SetChannel(RF_FREQUENCY);                 // Set LoRa frequency
   Radio.SetTxConfig(MODEM_LORA, TX_OUTPUT_POWER, 0, LORA_BANDWIDTH,
                     LORA_SPREADING_FACTOR, LORA_CODINGRATE,
                     LORA_PREAMBLE_LENGTH, LORA_FIX_LENGTH_PAYLOAD_ON,
                     true, 0, 0, LORA_IQ_INVERSION_ON, 3000); // Transmission config
+  Radio.SetRxConfig( MODEM_LORA, LORA_BANDWIDTH, LORA_SPREADING_FACTOR,
+                              LORA_CODINGRATE, 0, LORA_PREAMBLE_LENGTH,
+                              LORA_SYMBOL_TIMEOUT, LORA_FIX_LENGTH_PAYLOAD_ON,
+                              0, true, 0, 0, LORA_IQ_INVERSION_ON, true );
 
   // Print TinyGPS++ library version for debugging
   Serial.print(F("Debug TinyGPSPlus v."));
@@ -114,14 +132,15 @@ void setup() {
   for (int i = 0; i < MOVING_AVG_WINDOW; i++) {
     lightReadings[i] = 0;
   }
+
   delay(1000); //Allow all components to initialize properly
 }
 
 
 
-// ========================== Entering Main Loop ==========================
+// ========================== Entering Main Loop ============================
 void loop() {
-  // ========================== LoRa Processing ==========================
+  // ========================== LoRa Processing =============================
   Radio.IrqProcess();  // Handle LoRa IRQ events (e.g., TX done, RX received)
 
   // ========================== GPS Data Processing ==========================
@@ -140,10 +159,10 @@ void loop() {
       else
       {
         Serial1.read(); // Read and discard newline character
-          if(gps.time.second()==0)
-          {
-            continue;
-          }
+        if(gps.time.second()==0)
+        {
+          continue;
+        }
         isGpsDataAvailable();  // Update GPS fix status
         lastGpsLineTime = millis();
         break;
@@ -171,7 +190,13 @@ void loop() {
         firstScan = false;
         Serial.println("RFID scanned: " + rfid);
         digitalWrite(BUZZERPIN, HIGH);  // Activate buzzer briefly
-        delay(100);
+        //Handle having a respond from the server
+        sendLoRaData(putLockStatus2txpacket); // Send lock status via LoRa Event-Driven
+        // Wait for the response from the server
+        int response_timeout = 0;
+        while (!lora_idle && !gotValidResponse && response_timeout > RX_REPEAT_NUMBER  ) {
+          Radio.Rx(RX_TIMEOUT_VALUE);
+        }
         digitalWrite(BUZZERPIN, LOW);
       }
       rfid = ""; // Clear buffer for next scan
@@ -195,7 +220,6 @@ void loop() {
       digitalWrite(BUZZERPIN, LOW);
     }
   }
-
   delay(50); // Small delay to avoid overwhelming the serial buffer and the processor
 }
 // ========================== Quitting Main Loop ==========================
@@ -211,7 +235,6 @@ int readSmoothedLightLevel() {
   lightReadings[currentIndex] = analogRead(LIGHTPIN); // Read from the light sensor
   sumReadings += lightReadings[currentIndex]; // Add the new reading
   currentIndex = (currentIndex + 1) % MOVING_AVG_WINDOW; // Move to the next index
-
   return sumReadings / MOVING_AVG_WINDOW; // Return the average
 }
 
@@ -222,7 +245,7 @@ void isGpsDataAvailable() {
     gpsDataAvailable = true;
     Serial.println("GPS: Fix acquired");
   } else {
-    gpsDataAvailable = false; //Permit to decide if a localisation need to be sent
+    gpsDataAvailable = false; //Permit to decide if a localization need to be sent
     Serial.print("GPS: ");
     Serial.print(gps.satellites.value());
     Serial.println(" satellite(s), no fix acquired");
@@ -239,6 +262,13 @@ void OnTxTimeout(void) {
   Serial.println("TX timeout...");
   lora_idle = true;
 }
+
+void OnRxDone(uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr) {
+  memcpy(rxpacket, payload, size); // Copy received payload to rxpacket
+  receivedLoRaData();
+  lora_idle = true; // Mark LoRa as ready for next transmission
+}
+
 // ========================== Lora Sending/Receiving Functions ==========================
 // Function to send data via LoRa (Use as parameter the function to call to format the packet)
 void sendLoRaData(void (*formatPacket)()) {
@@ -246,9 +276,10 @@ void sendLoRaData(void (*formatPacket)()) {
     formatPacket(); // Call the provided function to format the packet
     Serial.print("Sending packet: ");
     Serial.println(txpacket); // Print the packet to be sent
-    aes_encrypt((const uint8_t *)txpacket, strlen(txpacket), (uint8_t *)txpacket); // Encrypt the packet
+    size_t encryptedLength = 0;
+    aes_encrypt((const uint8_t *)txpacket, strlen(txpacket), (uint8_t *)txpacket, &encryptedLength); // Encrypt the packet
     Serial.print("Encrypted packet: ");
-    for (size_t i = 0; i < strlen(txpacket); i++) {
+    for (size_t i = 0; i < encryptedLength; i++) {
       Serial.print(txpacket[i], HEX);
       Serial.print(" ");
     }
@@ -260,38 +291,45 @@ void sendLoRaData(void (*formatPacket)()) {
   }
 }
 // Function to receive data via LoRa
-// void receiveLoRaData(void (*processPacket)()) {
-//   if (Radio.RxDone()) { // Check if a packet was received
-//     int packetSize = Radio.GetRxPacketSize(); // Get the size of the received packet
-//     if (packetSize > 0 && packetSize < BUFFER_SIZE) { // Ensure packet size is valid
-//       Radio.Read(rxpacket, packetSize); // Read the received packet into buffer
-//       rxpacket[packetSize] = '\0'; // Null-terminate the string
-//       Serial.print("Received packet: ");
-//       Serial.println(rxpacket); // Print the received packet
-//       // Decrypt the received packet using AES
-//       uint8_t decryptedPacket[BUFFER_SIZE];
-//       aes_decrypt((const uint8_t *)rxpacket, packetSize, decryptedPacket);
-//       decryptedPacket[packetSize] = '\0'; // Null-terminate the decrypted string
-//       Serial.print("Decrypted packet: ");
-//       for (size_t i = 0; i < packetSize; i++) {
-//         Serial.print(decryptedPacket[i], HEX);
-//         Serial.print(" ");
-//       }
-//       Serial.println();
-//       // Process the decrypted packet (e.g., parse GPS data, lock status)
-//       //TODO: Implement packet processing logic here
-//       if (processPacket) {
-//         processPacket(); // Call the provided function to process the packet
-//       } else {
-//         Serial.println("No packet processing function provided.");
-//       }
-//     } else {
-//       Serial.println("Received packet size is invalid.");
-//     }
-//   } else {
-//     Serial.println("No packet received.");
-//   }
-// }
+void receivedLoRaData() {
+  int packetSize = Radio.GetRxPacketSize(); // Get the size of the received packet
+  // Check if a packet size is a multiple of 16 bytes to discard invalid packets
+  //TODO : Reduce the debugging output of this function could stall to many CPU cycles in between loRa packets
+  if (packetSize > 0 && packetSize < BUFFER_SIZE && packetSize % 16 == 0)
+  {
+    Serial.print("Received packet: ");
+    Serial.println(rxpacket); // Print the crypted packet
+    // Decrypt the received packet using AES
+    uint8_t decryptedPacket[BUFFER_SIZE];
+    size_t decryptedLength = 0;
+    aes_decrypt((const uint8_t *)rxpacket, packetSize, decryptedPacket, &decryptedLength); // Decrypt the packet
+    Serial.print("Decrypted packet: ");
+    for (size_t i = 0; i < decryptedLength; i++) {
+      Serial.print(decryptedPacket[i], HEX);
+      Serial.print(" ");
+    }
+    Serial.println();
+    // Process the received decrypted packet
+    // Isolate the first part of the packet to determine its type
+    // TODO: Call handler functions
+    String packetType = String((char *)decryptedPacket).substring(0, 3);
+    if (packetType == "GPS") {
+      Serial.println("Received GPS data packet.");
+      gotValidResponse = true;
+    } else if (packetType == "LOC") {
+      Serial.println("Received lock status packet.");
+      gotValidResponse = true;
+    } else {
+      Serial.println("Received unknown packet type.");
+      gotValidResponse = false;
+    }
+  } else {
+    // If packet size is invalid, discard it
+    Serial.println("Received packet size is invalid. So it was discarded.");
+    // Change global variable to signal that the response wasn't valid
+    gotValidResponse = false;
+  }
+}
 // ========================== LoRa Packet Formatting ==========================
 // Format GPS data into LoRa packet for transmission
 void putGpsData2txpacket() {
@@ -317,47 +355,44 @@ void putLockStatus2txpacket() {
     user_id += String(8 - user_id.length(), ' ');
   }
   // Format lock status into LoRa packet
-  sprintf(txpacket, "LOCK,%d,%s,%s", BIKE_ID, user_id.c_str(), identified ? "UNLOCKED" : "LOCKED");
+  sprintf(txpacket, "LOC,%d,%s,%s", BIKE_ID, user_id.c_str(), identified ? "UNLOCKED" : "LOCKED");
 }
 
-// Encrypption function using AES
+// Encryption function using AES
 // Uses mbedTLS library for AES encryption
 // Pads input to multiple of 16 bytes using PKCS7 padding
-void aes_encrypt(const uint8_t *input, size_t length, uint8_t *output) {
-  mbedtls_aes_context aes;
-  mbedtls_aes_init(&aes);
-  mbedtls_aes_setkey_enc(&aes, aes_key, 128);
-  // Pad length to multiple of 16 bytes (PKCS7 padding)
-  size_t padded_len = ((length + 15) / 16) * 16;
-  uint8_t buf[padded_len];
-  memcpy(buf, input, length);
-  uint8_t pad = padded_len - length;
-  for (size_t i = length; i < padded_len; i++) {
-    buf[i] = pad;
-  }
-  // Encrypt each 16-byte block
-  for (size_t i = 0; i < padded_len; i += 16) {
-    mbedtls_aes_crypt_ecb(&aes, MBEDTLS_AES_ENCRYPT, buf + i, output + i);
-  }
-  mbedtls_aes_free(&aes);
+void aes_encrypt(const uint8_t *input, size_t length, uint8_t *output, size_t *out_len) {
+    mbedtls_aes_context aes;
+    mbedtls_aes_init(&aes);
+    mbedtls_aes_setkey_enc(&aes, aes_key, 128);
+    size_t padded_len = ((length + 15) / 16) * 16;
+    uint8_t buf[padded_len];
+    memcpy(buf, input, length);
+    uint8_t pad = padded_len - length;
+    for (size_t i = length; i < padded_len; i++) buf[i] = pad;
+    for (size_t i = 0; i < padded_len; i += 16) {
+        mbedtls_aes_crypt_ecb(&aes, MBEDTLS_AES_ENCRYPT, buf + i, output + i);
+    }
+    *out_len = padded_len;  // Return encrypted length
+    mbedtls_aes_free(&aes);
 }
 // Decrypt function using AES
 // Uses mbedTLS library for AES decryption
 // Assumes input is padded with PKCS7 padding
 // Removes padding after decryption
-void aes_decrypt(const uint8_t *input, size_t length, uint8_t *output) {
-  mbedtls_aes_context aes;
-  mbedtls_aes_init(&aes);
-  mbedtls_aes_setkey_dec(&aes, aes_key, 128);
-  // Decrypt each 16-byte block
-  for (size_t i = 0; i < length; i += 16) {
-    mbedtls_aes_crypt_ecb(&aes, MBEDTLS_AES_DECRYPT, input + i, output + i);
-  }
-  // Remove PKCS7 padding
-  size_t pad = output[length - 1];
-  if (pad > 0 && pad <= 16) {
-    output[length - pad] = '\0'; // Null-terminate the string
-  }
-  mbedtls_aes_free(&aes);
+void aes_decrypt(const uint8_t *input, size_t length, uint8_t *output, size_t *out_len) {
+    mbedtls_aes_context aes;
+    mbedtls_aes_init(&aes);
+    mbedtls_aes_setkey_dec(&aes, aes_key, 128);
+    for (size_t i = 0; i < length; i += 16) {
+        mbedtls_aes_crypt_ecb(&aes, MBEDTLS_AES_DECRYPT, input + i, output + i);
+    }
+    uint8_t pad = output[length - 1];
+    if (pad > 0 && pad <= 16) {
+        *out_len = length - pad;
+    } else {
+        *out_len = length; // No padding found
+    }
+    mbedtls_aes_free(&aes);
 }
 // ========================== End of Functions Definitions ===============
