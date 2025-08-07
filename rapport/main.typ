@@ -48,7 +48,7 @@ Les deux serveurs seraient basés sur Rocky Linux en utilisant une architecture 
 
 == Diagramme
 #set page(flipped: true)
-#figure(image("./figures/IOT-diagramme.jpg",width: 100%),)
+#figure(image("./figures/IOT-diagramme.png",width: 100%),)
 
 = Mise en place
 == ESP32 LORA
