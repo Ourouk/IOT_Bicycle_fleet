@@ -33,7 +33,6 @@ static RadioEvents_t RadioEvents; // Radio event handler structure
 unsigned long lastLoRaGpsTime = 0; // Last time GPS data was sent via LoRa
 unsigned long lastLoRaLockStatusTime = 0; // Last time lock status was sent
 
-// 
 // ========================== GPS Configuration ==========================
 #define BAUD 9600               // Baud rate for GPS communication
 #define RXPIN 33                 // GPS RX pin (data from GPS module)
@@ -312,12 +311,14 @@ void receivedLoRaData(uint16_t packetSize) {
     // Isolate the first part of the packet to determine its type
     // TODO: Call handler functions
     String packetType = String((char *)decryptedPacket).substring(0, 3);
-    if (packetType == "GPS") {
+    if (packetType == "aut") {
+      Serial.println("Received authentication packet.");
+      gotValidResponse = true;
+      // Extract bike ID and user ID from the packet
+      
+    } else if (packetType == "loc") {
       Serial.println("Received GPS data packet.");
-      gotValidResponse = true;
-    } else if (packetType == "LOC") {
-      Serial.println("Received lock status packet.");
-      gotValidResponse = true;
+      gotValidResponse = false;
     } else {
       Serial.println("Received unknown packet type.");
       gotValidResponse = false;
@@ -333,7 +334,7 @@ void receivedLoRaData(uint16_t packetSize) {
 // Format GPS data into LoRa packet for transmission
 void putGpsData2txpacket() {
   if (gps.location.isValid()) { // If GPS fix valid, include coordinates
-    sprintf(txpacket, "GPS,%d,%.6f,%.6f,%d,%02d/%02d/%02d,%02d:%02d:%02d",
+    sprintf(txpacket, "loc,%d,%.6f,%.6f,%d,%02d/%02d/%02d,%02d:%02d:%02d",
             BIKE_ID,
             gps.location.lat(),
             gps.location.lng(),
@@ -341,7 +342,7 @@ void putGpsData2txpacket() {
             gps.date.month(), gps.date.day(), gps.date.year(),
             gps.time.hour(), gps.time.minute(), gps.time.second());
   } else { // If no GPS fix, send placeholders
-    sprintf(txpacket, "GPS,%d,N/A,N/A,N/A,N/A,N/A,N/A", BIKE_ID);
+    sprintf(txpacket, "loc,%d,N/A,N/A,N/A,N/A,N/A,N/A", BIKE_ID);
   }
 }
 
@@ -354,7 +355,7 @@ void putLockStatus2txpacket() {
     user_id += String(8 - user_id.length(), ' ');
   }
   // Format lock status into LoRa packet
-  sprintf(txpacket, "LOC,%d,%s,%s", BIKE_ID, user_id.c_str(), identified ? "UNLOCKED" : "LOCKED");
+  sprintf(txpacket, "aut,%d,%s,%s", BIKE_ID, user_id.c_str(), identified ? "UNLOCKED" : "LOCKED");
 }
 
 // Encryption function using AES
