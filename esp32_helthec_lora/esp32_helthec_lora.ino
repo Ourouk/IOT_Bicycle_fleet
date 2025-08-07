@@ -265,7 +265,7 @@ void OnTxTimeout(void) {
 
 void OnRxDone(uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr) {
   memcpy(rxpacket, payload, size); // Copy received payload to rxpacket
-  receivedLoRaData();
+  receivedLoRaData(size);
   lora_idle = true; // Mark LoRa as ready for next transmission
 }
 
@@ -285,14 +285,13 @@ void sendLoRaData(void (*formatPacket)()) {
     }
     Serial.println();
     lora_idle = false; // Mark LoRa as busy
-    Radio.Send((uint8_t *)txpacket, strlen(txpacket)); // Send the packet
+    Radio.Send((uint8_t *)txpacket, encryptedLength); // Send the packet
   } else {
     Serial.println("LoRa is busy, cannot send data.");
   }
 }
 // Function to receive data via LoRa
-void receivedLoRaData() {
-  int packetSize = Radio.GetRxPacketSize(); // Get the size of the received packet
+void receivedLoRaData(uint16_t packetSize) {
   // Check if a packet size is a multiple of 16 bytes to discard invalid packets
   //TODO : Reduce the debugging output of this function could stall to many CPU cycles in between loRa packets
   if (packetSize > 0 && packetSize < BUFFER_SIZE && packetSize % 16 == 0)
