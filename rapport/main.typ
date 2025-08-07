@@ -3,7 +3,7 @@
 #show: project.with(
   course-title: "IOT",
   date: datetime.today(),
-  title: "Vélos connectés\nVersion 2",
+  title: "Gestion de flottes de \n vélos connectés",
   authors: (
     (
       first-name: "Andrea",

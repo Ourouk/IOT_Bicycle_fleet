@@ -4,42 +4,34 @@ import network
 from umqtt.simple import MQTTClient
 
 # WiFi credentials
-SSID = 'RPiStation01'
-PASSWORD = 'RPiStation01'
-
-# Configure your static IP address, subnet mask, gateway, and DNS
-STATIC_IP = '192.199.2.254'
-SUBNET_MASK = '255.255.255.0'
-GATEWAY = '192.199.2.254'
+SSID = "RPiStation01"
+PASSWORD = "RPiStation01"
 
 # MQTT configuration
-MQTT_SERVER = '192.199.2.254'
-CLIENT_ID = 'b01'
-TOPIC_PUB = b'station/bornes/replies'
-TOPIC_SUB = b'station/bornes'
+MQTT_SERVER = "192.199.2.254"
+CLIENT_ID = "b01"
+TOPIC_PUB = b"station/bornes/replies"
+TOPIC_SUB = b"station/bornes"
 
-# Initialise Red LED on GPIO 2
+# Initialize LEDs
 led_red = Pin(2, Pin.OUT)
-# Initialise Green LED on GPIO 4
 led_green = Pin(3, Pin.OUT)
 
-# Initialize WiFi connection
+# Initialize WiFi connection using DHCP
 def connect_wifi(ssid, password):
     sta = network.WLAN(network.STA_IF)
+    sta.active(True)
     if not sta.isconnected():
-        print('Connecting to WiFi...')
-        sta.active(True)
-        # sta.ifconfig((STATIC_IP, SUBNET_MASK, GATEWAY))
+        print("Connecting to WiFi...")
         sta.connect(ssid, password)
-        # Timeout loop with a limit to avoid infinite loops
         timeout = 10  # 10 seconds timeout
         while not sta.isconnected() and timeout > 0:
             time.sleep(1)
             timeout -= 1
-            print(f'Attempting to connect... ({10 - timeout}/10)')
+            print(f"Attempting to connect... ({10 - timeout}/10)")
         if not sta.isconnected():
-            raise RuntimeError('Could not connect to WiFi')
-    print('Network connected:', sta.ifconfig())
+            raise RuntimeError("Could not connect to WiFi")
+    print("Network connected:", sta.ifconfig())
     return sta
 
 # Connect to MQTT broker
@@ -47,84 +39,69 @@ def connect_mqtt(client_id, server):
     try:
         client = MQTTClient(client_id, server)
         client.connect()
-        print(f'Connected to MQTT broker at {server}')
+        print(f"Connected to MQTT broker at {server}")
         return client
     except Exception as e:
-        print(f'Failed to connect to MQTT broker: {e}')
+        print(f"Failed to connect to MQTT broker: {e}")
         return None
 
-# Publish sensor data to MQTT
-def publish_data(client, temperature, humidity):
+# Publish data to MQTT
+def publish_data(client):
     try:
-        payload = '{"temperature": %s, "humidity": %s}' % (temperature, humidity)
+        payload = '{"status": "active"}'
         client.publish(TOPIC_PUB, payload)
-        print('Data sent:', payload)
+        print("Data sent:", payload)
     except Exception as e:
-        print(f'Failed to publish data: {e}')
-        return None
+        print(f"Failed to publish data: {e}")
 
 # Main logic
+client = None  # Initialize client as None
 try:
-    #Wifi Logic
     # Connect to WiFi
-    sta = connect_wifi(SSID,PASSWORD)
-    # Set static IP configuration
-    sta.ifconfig((STATIC_IP, SUBNET_MASK, GATEWAY))
+    sta = connect_wifi(SSID, PASSWORD)
 
     # Connect to the MQTT broker
     client = connect_mqtt(CLIENT_ID, MQTT_SERVER)
 
-    # Main loop to read sensor data and publish it
+    # Main loop to publish data
+    last_mqtt_reconnect_time = 0
     while True:
         try:
-            d.measure()
-            temperature = d.temperature()
-            humidity = d.humidity()
-
-            print(f'Temperature: {temperature} °C')
-            print(f'Humidity: {humidity} %')
-
             # Send data via MQTT
             if client is not None:
-                publish_data(client, temperature, humidity)
-
-                # Turn off the LED when connected to MQTT
-                led.off()
+                publish_data(client)
+                led_red.off()  # Turn off the red LED when connected to MQTT
             else:
-                # Turn on the LED when not connected to MQTT
-                led.on()
+                led_red.on()  # Turn on the red LED when not connected to MQTT
 
-            # Turn off the LED when connected to MQTT
-            led.off()
+            # Reconnect to MQTT every 2 minutes
+            if time.time() - last_mqtt_reconnect_time >= 120:
+                try:
+                    if client is not None:
+                        client.disconnect()
+                        print("Disconnected from MQTT broker")
+                except Exception as e:
+                    print(f"Failed to disconnect MQTT client: {e}")
+                client = connect_mqtt(CLIENT_ID, MQTT_SERVER)
+                last_mqtt_reconnect_time = time.time()
 
-        except OSError as e:
-            print(f'Failed to read sensor data: {e}')
-
-            # Turn on the LED when not connected to MQTT
-            led.on()
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            led_red.on()  # Turn on the red LED when there's an error
 
         # Wait for 30 seconds
         time.sleep(30)
 
-        # Reconnect to MQTT every 2 minutes
-        if time.time() % 120 < 30:
-            try:
-                client.disconnect()
-                print('Disconnected from MQTT broker')
-            except Exception as e:
-                print(f'Failed to disconnect MQTT client: {e}')
-
-            client = connect_mqtt(CLIENT_ID, MQTT_SERVER)
-
 except KeyboardInterrupt:
-    print('Process stopped by user')
+    print("Process stopped by user")
 
 finally:
     try:
-        # client.disconnect()
-        print('Disconnected from MQTT broker')
+        if client is not None:
+            client.disconnect()
+            print("Disconnected from MQTT broker")
     except Exception as e:
-        print(f'Failed to disconnect MQTT client: {e}')
+        print(f"Failed to disconnect MQTT client: {e}")
 
     # Turn off the LED when the script ends
-    led.off()
+    led_red.off()
