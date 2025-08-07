@@ -1,6 +1,5 @@
 import time
 from machine import Pin
-import dht
 import network
 from umqtt.simple import MQTTClient
 
@@ -9,22 +8,20 @@ SSID = 'RPiStation01'
 PASSWORD = 'RPiStation01'
 
 # Configure your static IP address, subnet mask, gateway, and DNS
-STATIC_IP = '192.199.1.101'
+STATIC_IP = '192.199.2.254'
 SUBNET_MASK = '255.255.255.0'
-GATEWAY = '192.199.1.2'
+GATEWAY = '192.199.2.254'
 
 # MQTT configuration
-MQTT_SERVER = '192.199.1.110'
-CLIENT_ID = 'ESP32_DHT11'
-TOPIC_PUB = b'home/dht11'
+MQTT_SERVER = '192.199.2.254'
+CLIENT_ID = 'b01'
+TOPIC_PUB = b'station/bornes/replies'
+TOPIC_SUB = b'station/bornes'
 
-# Sensor configuration for DHT11
-SENSOR_PIN = 2
-d = dht.DHT11(Pin(SENSOR_PIN))
-
-# LED configuration
-LED_PIN = 0
-led = Pin(LED_PIN, Pin.OUT)
+# Initialise Red LED on GPIO 2
+led_red = Pin(2, Pin.OUT)
+# Initialise Green LED on GPIO 4
+led_green = Pin(3, Pin.OUT)
 
 # Initialize WiFi connection
 def connect_wifi(ssid, password):
