@@ -259,37 +259,54 @@ void sendLoRaData(void (*formatPacket)()) {
 //   aut,BIKE_ID,STATUS
 // STATUS must be LOCKED or UNLOCKED (case-insensitive).
 void receivedLoRaData(uint16_t packetSize) {
-  if (packetSize == 0 || packetSize >= BUFFER_SIZE || (packetSize % 16) != 0) {
-    Serial.println("RX: invalid size (must be >0, <BUFFER_SIZE, and 16-byte multiple)");
+  // Basic bounds check against our ASCII-hex buffer capacity
+  if (packetSize == 0 || packetSize >= (BUFFER_SIZE * 2)) {
+    Serial.println("RX: invalid size (must be >0 and below capacity)");
     return;
   }
 
-  // Debug print encrypted
-  Serial.print("RX (enc): ");
+  // Print the incoming ASCII-hex as-is (skip CR/LF for readability)
+  Serial.print("RX (enc ASCII): ");
   for (uint16_t i = 0; i < packetSize; i++) {
-    Serial.print((uint8_t)rxpacket[i], HEX);
-    Serial.print(" ");
+    char c = (char)rxpacket[i];
+    if (c == '\r' || c == '\n') continue;
+    Serial.write(c);
   }
   Serial.println();
 
-  // Decrypt
-  uint8_t decryptedPacket[BUFFER_SIZE];
-  size_t decryptedLength = 0;
-  aes_decrypt((const uint8_t *)rxpacket, packetSize, decryptedPacket, &decryptedLength);
+  // 1) ASCII-hex -> binary ciphertext
+  uint8_t ct[BUFFER_SIZE];
+  size_t ctLen = 0;
+  if (!hex2bin((const char*)rxpacket, packetSize, ct, sizeof(ct), &ctLen)) {
+    Serial.println("RX: not valid ASCII hex");
+    return;
+  }
+  if ((ctLen % 16) != 0) {
+    Serial.println("RX: ECB ciphertext must be multiple of 16 bytes");
+    return;
+  }
 
-  // Null-terminate for safe String use
-  if (decryptedLength >= BUFFER_SIZE) decryptedLength = BUFFER_SIZE - 1;
-  decryptedPacket[decryptedLength] = 0;
+  // 2) AES-ECB decrypt (+ PKCS#7)
+  uint8_t pt[BUFFER_SIZE];
+  size_t ptLen = 0;
+  const bool expect_pkcs7 = true;   // set false if sender disabled padding
+  if (!aes_ecb_decrypt(ct, ctLen, aes_key, 128, pt, sizeof(pt), &ptLen, expect_pkcs7)) {
+    Serial.println("RX: decrypt/padding failed (wrong key/mode/padding?)");
+    return;
+  }
+
+  // 3) Null-terminate for safe String/printing
+  if (ptLen >= sizeof(pt)) ptLen = sizeof(pt) - 1;
+  pt[ptLen] = 0;
 
   Serial.print("RX (dec): ");
-  for (size_t i = 0; i < decryptedLength; i++) Serial.print((char)decryptedPacket[i]);
+  Serial.write(pt, ptLen);
   Serial.println();
 
-  // Parse header/type
-  String s = String((char*)decryptedPacket);
+  // 4) Parse CSV: "aut,BIKE_ID,STATUS"
+  String s = String((char*)pt);
   s.trim();
 
-  // Expect CSV: type,field2,field3 with no extras
   int c1 = s.indexOf(',');
   if (c1 < 0) { Serial.println("RX: malformed packet (no commas)"); return; }
   String type = s.substring(0, c1);
@@ -303,7 +320,6 @@ void receivedLoRaData(uint16_t packetSize) {
     return;
   }
 
-  // Find second comma and ensure there is NO third comma
   int c2 = s.indexOf(',', c1 + 1);
   if (c2 < 0) { Serial.println("RX aut: malformed (missing BIKE_ID or STATUS)"); return; }
   int c3 = s.indexOf(',', c2 + 1);
@@ -316,26 +332,24 @@ void receivedLoRaData(uint16_t packetSize) {
   String tStatus = s.substring(c2 + 1);
   tBike.trim(); tStatus.trim(); tStatus.toUpperCase();
 
-  // Validate bike id
   int bid = tBike.toInt();
   if (bid != BIKE_ID) {
     Serial.println("RX aut: different BIKE_ID -> ignored");
     return;
   }
 
-  // Apply status
-  if (tStatus == "UNLOCKED") {
+int status = tStatus.toInt();
+  if (status == 1) {
     identified = true;
-    Serial.println("Auth: UNLOCKED by station");
-  } else if (tStatus == "LOCKED") {
+    Serial.println("Auth: 1 by station");
+  } else if (status == 0) {
     identified = false;
-    Serial.println("Auth: LOCKED by station");
+    Serial.println("Auth: 0 by station");
   } else {
     Serial.println("Auth: unknown STATUS token -> expected LOCKED or UNLOCKED");
   }
-
-  // Always return to RX handled by callback tail
 }
+
 
 
 // ========================== LoRa Packet Formatting =====================
@@ -381,19 +395,72 @@ void aes_encrypt(const uint8_t *input, size_t length, uint8_t *output, size_t *o
 // Uses mbedTLS library for AES decryption
 // Assumes input is padded with PKCS7 padding
 // Removes padding after decryption
-void aes_decrypt(const uint8_t *input, size_t length, uint8_t *output, size_t *out_len) {
+bool hex2bin(const char *hex, size_t hex_len, uint8_t *out, size_t out_cap, size_t *out_len) {
+    auto nib = [](int c)->int{
+        if (c>='0'&&c<='9') return c-'0';
+        if (c>='a'&&c<='f') return c-'a'+10;
+        if (c>='A'&&c<='F') return c-'A'+10;
+        return -1;
+    };
+    size_t j = 0, o = 0; int hi = -1;
+    for (size_t i = 0; i < hex_len; i++) {
+        int c = hex[i];
+        if (c==' '||c=='\r'||c=='\n'||c=='\t') continue;
+        int v = nib(c); if (v < 0) return false;
+        if ((j++ & 1) == 0) hi = v;
+        else {
+            if (o >= out_cap) return false;
+            out[o++] = (uint8_t)((hi << 4) | v);
+        }
+    }
+    if ((j & 1) != 0) return false;
+    *out_len = o; return true;
+}
+bool aes_ecb_decrypt(
+    const uint8_t *input, size_t in_len,
+    const uint8_t *aes_key, size_t key_bits,   // 128, 192, or 256
+    uint8_t *output, size_t out_cap, size_t *out_len,
+    bool expect_pkcs7)
+{
+    if (!input || !aes_key || !output || !out_len) return false;
+    *out_len = 0;
+
+    // ECB requires full blocks
+    if (in_len == 0 || (in_len % 16) != 0) return false;
+    if (out_cap < in_len) return false;
+
     mbedtls_aes_context aes;
     mbedtls_aes_init(&aes);
-    mbedtls_aes_setkey_dec(&aes, aes_key, 128);
-    for (size_t i = 0; i < length; i += 16) {
-        mbedtls_aes_crypt_ecb(&aes, MBEDTLS_AES_DECRYPT, input + i, output + i);
+    int rc = mbedtls_aes_setkey_dec(&aes, aes_key, (unsigned int)key_bits);
+    if (rc != 0) { mbedtls_aes_free(&aes); return false; }
+
+    // Decrypt block-by-block; mbedtls_aes_crypt_ecb processes one 16B block
+    for (size_t i = 0; i < in_len; i += 16) {
+        rc = mbedtls_aes_crypt_ecb(&aes, MBEDTLS_AES_DECRYPT, input + i, output + i);
+        if (rc != 0) { mbedtls_aes_free(&aes); return false; }
     }
-    uint8_t pad = output[length - 1];
-    if (pad > 0 && pad <= 16) {
-        *out_len = length - pad;
-    } else {
-        *out_len = length; // No padding found
+
+    size_t plain_len = in_len;
+
+    if (expect_pkcs7) {
+        uint8_t pad = output[in_len - 1];
+        // PKCS#7: pad must be 1..16 and not exceed total length
+        if (pad == 0 || pad > 16 || pad > in_len) {
+            mbedtls_aes_free(&aes);
+            return false;
+        }
+        // Verify all padding bytes
+        for (size_t i = 0; i < pad; i++) {
+            if (output[in_len - 1 - i] != pad) {
+                mbedtls_aes_free(&aes);
+                return false;
+            }
+        }
+        plain_len = in_len - pad;
     }
+
+    *out_len = plain_len;
     mbedtls_aes_free(&aes);
+    return true;
 }
 // ========================== End of Functions Definitions ===============
