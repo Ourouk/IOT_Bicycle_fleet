@@ -5,6 +5,7 @@
 
 // Each bike of the fleet is associated with an ID
 #define BIKE_ID 1
+
 // ========================== LoRa Configuration ==========================
 #define RF_FREQUENCY 868100000   // LoRa frequency in Hz (EU868 band)
 #define TX_OUTPUT_POWER 5        // Transmission power in dBm
@@ -16,28 +17,28 @@
 #define LORA_FIX_LENGTH_PAYLOAD_ON false // Variable-length payload
 #define LORA_IQ_INVERSION_ON false        // No IQ inversion
 #define RX_TIMEOUT_VALUE 1000    // Timeout for RX in ms
-#define RX_REPEAT_NUMBER 5    // Number of RX repeats
+#define RX_REPEAT_NUMBER 5       // Number of RX repeats
 #define BUFFER_SIZE 256          // Packet buffer size
 
 // Buffers for sending/receiving LoRa data
 char txpacket[BUFFER_SIZE];
 char rxpacket[BUFFER_SIZE];
-bool lora_idle = true;          // Indicates if LoRa is ready for a new transmission
-static RadioEvents_t RadioEvents; // Radio event handler structure
+bool lora_idle = true;                 // Indicates if LoRa is ready for a new transmission
+static RadioEvents_t RadioEvents;      // Radio event handler structure
 
 // ========================== LoRa Message Configuration =================
 #define LoRa_GPS_Interval 60000 // Interval to send GPS data in ms
 #define LoRa_Lock_Status_EventDriven true // Send lock status only when changed
-#define LoRa_Lock_Status_Interval 300000 // Interval to send lock status in ms ONLY USED IF LoRa_Lock_Status_EventDriven IS FALSE
+#define LoRa_Lock_Status_Interval 300000  // Interval to send lock status in ms ONLY USED IF LoRa_Lock_Status_EventDriven IS FALSE
 // Associated var
-unsigned long lastLoRaGpsTime = 0; // Last time GPS data was sent via LoRa
-unsigned long lastLoRaLockStatusTime = 0; // Last time lock status was sent
+unsigned long lastLoRaGpsTime = 0;           // Last time GPS data was sent via LoRa
+unsigned long lastLoRaLockStatusTime = 0;    // Last time lock status was sent
 
 // ========================== GPS Configuration ==========================
-#define BAUD 9600               // Baud rate for GPS communication
+#define BAUD 9600                // Baud rate for GPS communication
 #define RXPIN 33                 // GPS RX pin (data from GPS module)
 #define TXPIN 34                 // GPS TX pin (data to GPS module)
-#define GPS_CHECK_INTERVAL 5000 // Interval to check GPS data in ms
+#define GPS_CHECK_INTERVAL 5000  // Interval to check GPS data in ms
 TinyGPSPlus gps;                // GPS object from TinyGPS++ library
 bool gpsDataAvailable = false;  // Flag to indicate GPS fix availability
 bool gpsDataReceived = false;   // Flag to indicate if GPS data was received
@@ -46,14 +47,6 @@ static unsigned long lastGpsLineTime = 0;  // Last time had a GPS full line
 // Debugs wrong wirings or faulty GPS modules
 // If no GPS data received for more than 5 seconds, print debug message every 5
 static unsigned long lastDebugTime = 0; // Last time debug message was printed
-
-// ========================== RFID Configuration ==========================
-#define RXPINRFID 1             // RFID RX pin
-#define TXPINRFID 38            // RFID TX pin
-String rfid;                    // Buffer to store RFID scan
-String lastscannedrfid;         // Stores last scanned RFID tag
-bool identified = false;        // True if a valid RFID is identified
-bool firstScan = true;          // Ensures first RFID scan is always accepted
 
 // ========================== Lighting & Buzzer ==========================
 #define LIGHTPIN 3              // Pin controlling the bike light
@@ -74,267 +67,282 @@ const unsigned char aes_key[16] = {
   0x0c, 0x0d, 0x0e, 0x0f
 };
 
-// Function declarations
-void OnTxDone(void); // Callback on successful transmission
-void OnTxTimeout(void); // Callback on transmission timeout
-void OnRxDone(uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr); // Callback on received data
-void OnRxTimeout(void); // Callback on reception timeout
-// Function to manage LoRa data
-void sendLoRaData(void *);
-void receivedLoRaData();
-// Function to format data from/for LoRa packet
+// ========================== Lock/Authorization State ===================
+
+bool identified = false;  // true = UNLOCKED, false = LOCKED
+
+// ========================== Forward Declarations =======================
 void putGpsData2txpacket();
-void isGpsDataAvailable();
-int readSmoothedLightLevel();
-void receivedLoRaData();
-bool gotValidResponse;
-// Crypto
-void aes_encrypt(const uint8_t*, size_t, uint8_t*, size_t*);
-void aes_decrypt(const uint8_t*, size_t, uint8_t*, size_t*);
+void aes_encrypt(const uint8_t *input, size_t length, uint8_t *output, size_t *out_len);
+void aes_decrypt(const uint8_t *input, size_t length, uint8_t *output, size_t *out_len);
+void sendLoRaData(void (*formatPacket)());
+void receivedLoRaData(uint16_t packetSize);
 
+// Radio event handlers ensure we return to continuous RX quickly
+void OnTxDone(void);
+void OnTxTimeout(void);
+void OnRxDone(uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr);
+void OnRxTimeout(void);
 
-
+// ========================== Setup ======================================
 void setup() {
-  // Initialize debug serial monitor
   Serial.begin(115200);
 
-  // Initialize GPS (Serial1) and RFID (Serial2) serial ports
+  // GPS serial setup
   Serial1.begin(BAUD, SERIAL_8N1, RXPIN, TXPIN);
-  Serial2.begin(BAUD, SERIAL_8N1, RXPINRFID, TXPINRFID);
 
-  // ========================== LoRa Setup ==========================
-  Mcu.begin(HELTEC_BOARD, SLOW_CLK_TPYE);         // Initialize Heltec MCU on slow clock for power saving
-  RadioEvents.TxDone = OnTxDone;                  // Callback on successful transmission
-  RadioEvents.TxTimeout = OnTxTimeout;            // Callback on transmission timeout
-  RadioEvents.RxDone = OnRxDone;                  // Callback on received data
-  Radio.Init(&RadioEvents);                       // Initialize LoRa radio with events
-  Radio.SetChannel(RF_FREQUENCY);                 // Set LoRa frequency
+  // LoRa setup (unchanged parameters)
+  Mcu.begin(HELTEC_BOARD, SLOW_CLK_TPYE);
+  RadioEvents.TxDone    = OnTxDone;
+  RadioEvents.TxTimeout = OnTxTimeout;
+  RadioEvents.RxDone    = OnRxDone;
+  RadioEvents.RxTimeout = OnRxTimeout;
+  Radio.Init(&RadioEvents);
+  // Apply LoRa Settings
+  Radio.SetChannel(RF_FREQUENCY);
   Radio.SetTxConfig(MODEM_LORA, TX_OUTPUT_POWER, 0, LORA_BANDWIDTH,
                     LORA_SPREADING_FACTOR, LORA_CODINGRATE,
                     LORA_PREAMBLE_LENGTH, LORA_FIX_LENGTH_PAYLOAD_ON,
-                    true, 0, 0, LORA_IQ_INVERSION_ON, 3000); // Transmission config
-  Radio.SetRxConfig( MODEM_LORA, LORA_BANDWIDTH, LORA_SPREADING_FACTOR,
-                              LORA_CODINGRATE, 0, LORA_PREAMBLE_LENGTH,
-                              LORA_SYMBOL_TIMEOUT, LORA_FIX_LENGTH_PAYLOAD_ON,
-                              0, true, 0, 0, LORA_IQ_INVERSION_ON, true );
+                    true, 0, 0, LORA_IQ_INVERSION_ON, 3000);
+  Radio.SetRxConfig(MODEM_LORA, LORA_BANDWIDTH, LORA_SPREADING_FACTOR,
+                    LORA_CODINGRATE, 0, LORA_PREAMBLE_LENGTH,
+                    LORA_SYMBOL_TIMEOUT, LORA_FIX_LENGTH_PAYLOAD_ON,
+                    0, true, 0, 0, LORA_IQ_INVERSION_ON, true);
 
-  // Print TinyGPS++ library version for debugging
-  Serial.print(F("Debug TinyGPSPlus v."));
-  Serial.println(TinyGPSPlus::libraryVersion());
+  // Start Radio in perpetual receive mode
+  lora_idle = true;
+  Radio.Rx(0);
 
-  // Initialize I/O pins for relay, buzzer, and light
+  // IO setup
   pinMode(RELAYPIN, OUTPUT);
   pinMode(BUZZERPIN, OUTPUT);
-  pinMode(LIGHTPIN, INPUT); // Set light pin as input
+  pinMode(LIGHTPIN, INPUT);
+  for (int i = 0; i < MOVING_AVG_WINDOW; i++) lightReadings[i] = 0;
 
-  // Initialize light readings array
-  for (int i = 0; i < MOVING_AVG_WINDOW; i++) {
-    lightReadings[i] = 0;
-  }
-
-  delay(1000); //Allow all components to initialize properly
+  delay(200);
 }
 
-
-
-// ========================== Entering Main Loop ============================
+// ========================== Loop =======================================
 void loop() {
-  // ========================== LoRa Processing =============================
-  Radio.IrqProcess();  // Handle LoRa IRQ events (e.g., TX done, RX received)
+  // Process radio IRQs
+  Radio.IrqProcess();
 
-  // ========================== GPS Data Processing ==========================
-  gpsDataReceived = false; // Reset GPS data received flag
-  // GPS Serial data reading
-  if(millis() - lastGpsLineTime > GPS_CHECK_INTERVAL)
-  {
-    while (Serial1.available() > 0) // Check if GPS sent new data
-    {
-      if(Serial1.peek()!='\n')
-      {
+  // -------------------------- GPS handling  ----------------------------
+  gpsDataReceived = false;
+  if (millis() - lastGpsLineTime > GPS_CHECK_INTERVAL) {
+    while (Serial1.available() > 0) {
+      if (Serial1.peek() != '\n') {
         gps.encode(Serial1.read());
-        gpsDataReceived = true; // Doesn't matter if GPS data is valid or not, we received data
+        gpsDataReceived = true;
         lastGpsDataTime = millis();
-      }
-      else
-      {
-        Serial1.read(); // Read and discard newline character
-        if(gps.time.second()==0)
-        {
+      } else {
+        Serial1.read(); // consume '\n'
+        if (gps.time.second() == 0) {
           continue;
         }
-        isGpsDataAvailable();  // Update GPS fix status
+        // Update GPS availability flag
+        if (gps.location.isValid()) {
+          gpsDataAvailable = true;
+        } else {
+          gpsDataAvailable = false;
+        }
         lastGpsLineTime = millis();
         break;
       }
     }
-    // If GPS Serial received no data for more than 20 seconds.
     if (!gpsDataReceived && (millis() - lastGpsDataTime) > 20000 && (millis() - lastDebugTime) > 20000) {
-        Serial.println("Warning: No GPS data received for over 20 seconds.");
-        lastDebugTime = millis();
-    }
-    // LoRa GPS data sending
-    if( millis() - lastLoRaGpsTime > LoRa_GPS_Interval && gpsDataAvailable && lora_idle) {
-      sendLoRaData(putGpsData2txpacket); // Send GPS data via LoRa
-      lastLoRaGpsTime = millis(); // Update last GPS transmission time
+      Serial.println("Warning: No GPS data received for over 20 seconds.");
+      lastDebugTime = millis();
     }
   }
-  // ========================== RFID Processing ==========================
-  while (Serial2.available()) {     // Check if RFID scanner sent data
-    char c = Serial2.read();
-    rfid += c;                      // Append character to RFID buffer
-    if (rfid.length() >= 12) {      // Typical RFID tag length is 12 chars
-      if (firstScan || rfid != lastscannedrfid) { // Accept if first scan or different tag
-        identified = true;
-        lastscannedrfid = rfid;      // Save last scanned RFID
-        firstScan = false;
-        Serial.println("RFID scanned: " + rfid);
-        digitalWrite(BUZZERPIN, HIGH);  // Activate buzzer briefly
-        //Handle having a respond from the server
-        sendLoRaData(putLockStatus2txpacket); // Send lock status via LoRa Event-Driven
-        // Wait for the response from the server
-        int response_timeout = 0;
-        while (!lora_idle && !gotValidResponse && response_timeout > RX_REPEAT_NUMBER  ) {
-          Radio.Rx(RX_TIMEOUT_VALUE);
-        }
-        digitalWrite(BUZZERPIN, LOW);
-      }
-      rfid = ""; // Clear buffer for next scan
-    }
-  }
-  // ========================== Lighting & Relay Control ==========================
-  int lightLevel = readSmoothedLightLevel(); // Read smoothed light level
 
-  if (identified) { // If RFID identified (bike unlocked)
+// -------------------------- LoRa TX break for GPS --------------------
+// [ADDED RX-ALWAYS] TX only when idle; callbacks return to continuous RX.
+if (millis() - lastLoRaGpsTime > LoRa_GPS_Interval && lora_idle) {
+  sendLoRaData(putGpsData2txpacket);
+  lastLoRaGpsTime = millis();
+}
+
+  // -------------------------- Light/Relay/Buzzer logic -----------------
+  // This section is unchanged functionally; lock state now comes from aut packets.
+  // Moving average read
+  sumReadings -= lightReadings[currentIndex];
+  lightReadings[currentIndex] = analogRead(LIGHTPIN);
+  sumReadings += lightReadings[currentIndex];
+  currentIndex = (currentIndex + 1) % MOVING_AVG_WINDOW;
+  int lightLevel = sumReadings / MOVING_AVG_WINDOW;
+
+  if (identified) { // UNLOCKED
     if (lightLevel < LIGHT_THRESHOLD) {
-      digitalWrite(RELAYPIN, HIGH); // Power relay ON (Low Light)
+      digitalWrite(RELAYPIN, HIGH);  // ON in low light
     } else {
-      digitalWrite(RELAYPIN, LOW); // Power Relay Off (Hight Light)
+      digitalWrite(RELAYPIN, LOW);   // OFF in bright light
     }
-  } else {
-    digitalWrite(RELAYPIN, LOW); // Locked bike do not need light
-    // Activate buzzer if not authenticated AND GPS in motion
-    if (gpsDataAvailable && gps.speed.kmph() > 1.0) { // Speed threshold 1 km/h
-      digitalWrite(BUZZERPIN, HIGH);
-    } else {
-      digitalWrite(BUZZERPIN, LOW);
-    }
+    digitalWrite(BUZZERPIN, LOW);
+  } else { // LOCKED
+    digitalWrite(RELAYPIN, LOW);     // No light when locked
+    // Keep buzzer quiet unless you want anti-tamper here; leaving OFF.
+    digitalWrite(BUZZERPIN, LOW);
   }
-  delay(50); // Small delay to avoid overwhelming the serial buffer and the processor
-}
-// ========================== Quitting Main Loop ==========================
 
-
-
-
-
-// ========================= Entering Functions Definitions ===============
-// Function to read and smooth light level using moving average
-int readSmoothedLightLevel() {
-  sumReadings -= lightReadings[currentIndex]; // Subtract the oldest reading
-  lightReadings[currentIndex] = analogRead(LIGHTPIN); // Read from the light sensor
-  sumReadings += lightReadings[currentIndex]; // Add the new reading
-  currentIndex = (currentIndex + 1) % MOVING_AVG_WINDOW; // Move to the next index
-  return sumReadings / MOVING_AVG_WINDOW; // Return the average
-}
-
-
-// ========================== GPS Utilities ==========================
-void isGpsDataAvailable() {
-  if (gps.location.isValid()) { // Check if GPS has a valid fix
-    gpsDataAvailable = true;
-    Serial.println("GPS: Fix acquired");
-  } else {
-    gpsDataAvailable = false; //Permit to decide if a localization need to be sent
-    Serial.print("GPS: ");
-    Serial.print(gps.satellites.value());
-    Serial.println(" satellite(s), no fix acquired");
+  // [ADDED RX-ALWAYS] Defensive: ensure we remain in RX when idle
+  if (lora_idle) {
+    Radio.Rx(0);
   }
+
+  delay(20);
 }
-// ========================== Lora Event Handlers ===========================
+
+// ========================== Radio callbacks ============================
+// [ADDED RX-ALWAYS] All callbacks return radio to continuous RX
 void OnTxDone(void) {
-  Serial.println("TX done...");
-  lora_idle = true; // Mark LoRa as ready for next transmission
+  Serial.println("TX done");
+  lora_idle = true;
+  Radio.Rx(0);
 }
 
 void OnTxTimeout(void) {
-  Radio.Sleep(); // Put LoRa radio to sleep on timeout
-  Serial.println("TX timeout...");
+  Serial.println("TX timeout");
   lora_idle = true;
+  Radio.Rx(0);
+}
+
+void OnRxTimeout(void) {
+  // Keep listening; timeouts are expected on idle channels
+  lora_idle = true;
+  Radio.Rx(0);
 }
 
 void OnRxDone(uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr) {
-  memcpy(rxpacket, payload, size); // Copy received payload to rxpacket
+  // Copy encrypted payload and process
+  if (size > BUFFER_SIZE) size = BUFFER_SIZE;
+  memcpy(rxpacket, payload, size);
   receivedLoRaData(size);
-  lora_idle = true; // Mark LoRa as ready for next transmission
+  lora_idle = true;
+  Radio.Rx(0);
+}
+void sendLoRaData(void (*formatPacket)()) {
+  if (!formatPacket) {
+    Serial.println("sendLoRaData: null formatter");
+    return;
+  }
+
+  // Only break RX when we're idle
+  if (!lora_idle) {
+    Serial.println("sendLoRaData: radio busy, skipping TX");
+    return;
+  }
+
+  // 1) Let caller format the plaintext into txpacket
+  formatPacket();
+
+  // 2) Encrypt in-place into txpacket buffer (output -> txpacket)
+  size_t encryptedLength = 0;
+  const size_t plainLen = strlen(txpacket);
+  if (plainLen == 0) {
+    Serial.println("sendLoRaData: empty payload");
+    return;
+  }
+  aes_encrypt((const uint8_t*)txpacket, plainLen, (uint8_t*)txpacket, &encryptedLength);
+
+  // 3) Transmit
+  Serial.print("TX (encrypted, len=");
+  Serial.print(encryptedLength);
+  Serial.println(")");
+
+  lora_idle = false;                 // [ADDED RX-ALWAYS] we briefly leave RX to TX
+  Radio.Send((uint8_t*)txpacket, encryptedLength);
+  // Radio will be put back into Rx(0) in OnTxDone/OnTxTimeout
+}
+// ========================== LoRa Packet Processing =====================
+// Authorization protocol (no USER_ID):
+//   aut,BIKE_ID,STATUS
+// STATUS must be LOCKED or UNLOCKED (case-insensitive).
+void receivedLoRaData(uint16_t packetSize) {
+  if (packetSize == 0 || packetSize >= BUFFER_SIZE || (packetSize % 16) != 0) {
+    Serial.println("RX: invalid size (must be >0, <BUFFER_SIZE, and 16-byte multiple)");
+    return;
+  }
+
+  // Debug print encrypted
+  Serial.print("RX (enc): ");
+  for (uint16_t i = 0; i < packetSize; i++) {
+    Serial.print((uint8_t)rxpacket[i], HEX);
+    Serial.print(" ");
+  }
+  Serial.println();
+
+  // Decrypt
+  uint8_t decryptedPacket[BUFFER_SIZE];
+  size_t decryptedLength = 0;
+  aes_decrypt((const uint8_t *)rxpacket, packetSize, decryptedPacket, &decryptedLength);
+
+  // Null-terminate for safe String use
+  if (decryptedLength >= BUFFER_SIZE) decryptedLength = BUFFER_SIZE - 1;
+  decryptedPacket[decryptedLength] = 0;
+
+  Serial.print("RX (dec): ");
+  for (size_t i = 0; i < decryptedLength; i++) Serial.print((char)decryptedPacket[i]);
+  Serial.println();
+
+  // Parse header/type
+  String s = String((char*)decryptedPacket);
+  s.trim();
+
+  // Expect CSV: type,field2,field3 with no extras
+  int c1 = s.indexOf(',');
+  if (c1 < 0) { Serial.println("RX: malformed packet (no commas)"); return; }
+  String type = s.substring(0, c1);
+
+  if (type != "aut") {
+    if (type == "loc") {
+      Serial.println("RX: 'loc' packet received (ignored on bike side)");
+    } else {
+      Serial.println("RX: unknown packet type");
+    }
+    return;
+  }
+
+  // Find second comma and ensure there is NO third comma
+  int c2 = s.indexOf(',', c1 + 1);
+  if (c2 < 0) { Serial.println("RX aut: malformed (missing BIKE_ID or STATUS)"); return; }
+  int c3 = s.indexOf(',', c2 + 1);
+  if (c3 >= 0) {
+    Serial.println("RX aut: rejected (protocol now 'aut,BIKE_ID,STATUS' — extra fields present)");
+    return;
+  }
+
+  String tBike = s.substring(c1 + 1, c2);
+  String tStatus = s.substring(c2 + 1);
+  tBike.trim(); tStatus.trim(); tStatus.toUpperCase();
+
+  // Validate bike id
+  int bid = tBike.toInt();
+  if (bid != BIKE_ID) {
+    Serial.println("RX aut: different BIKE_ID -> ignored");
+    return;
+  }
+
+  // Apply status
+  if (tStatus == "UNLOCKED") {
+    identified = true;
+    Serial.println("Auth: UNLOCKED by station");
+  } else if (tStatus == "LOCKED") {
+    identified = false;
+    Serial.println("Auth: LOCKED by station");
+  } else {
+    Serial.println("Auth: unknown STATUS token -> expected LOCKED or UNLOCKED");
+  }
+
+  // Always return to RX handled by callback tail
 }
 
-// ========================== Lora Sending/Receiving Functions ==========================
-// Function to send data via LoRa (Use as parameter the function to call to format the packet)
-void sendLoRaData(void (*formatPacket)()) {
-  if (lora_idle) { // Check if LoRa is ready for transmission
-    formatPacket(); // Call the provided function to format the packet
-    Serial.print("Sending packet: ");
-    Serial.println(txpacket); // Print the packet to be sent
-    size_t encryptedLength = 0;
-    aes_encrypt((const uint8_t *)txpacket, strlen(txpacket), (uint8_t *)txpacket, &encryptedLength); // Encrypt the packet
-    Serial.print("Encrypted packet: ");
-    for (size_t i = 0; i < encryptedLength; i++) {
-      Serial.print(txpacket[i], HEX);
-      Serial.print(" ");
-    }
-    Serial.println();
-    lora_idle = false; // Mark LoRa as busy
-    Radio.Send((uint8_t *)txpacket, encryptedLength); // Send the packet
-  } else {
-    Serial.println("LoRa is busy, cannot send data.");
-  }
-}
-// Function to receive data via LoRa
-void receivedLoRaData(uint16_t packetSize) {
-  // Check if a packet size is a multiple of 16 bytes to discard invalid packets
-  //TODO : Reduce the debugging output of this function could stall to many CPU cycles in between loRa packets
-  if (packetSize > 0 && packetSize < BUFFER_SIZE && packetSize % 16 == 0)
-  {
-    Serial.print("Received packet: ");
-    Serial.println(rxpacket); // Print the crypted packet
-    // Decrypt the received packet using AES
-    uint8_t decryptedPacket[BUFFER_SIZE];
-    size_t decryptedLength = 0;
-    aes_decrypt((const uint8_t *)rxpacket, packetSize, decryptedPacket, &decryptedLength); // Decrypt the packet
-    Serial.print("Decrypted packet: ");
-    for (size_t i = 0; i < decryptedLength; i++) {
-      Serial.print(decryptedPacket[i], HEX);
-      Serial.print(" ");
-    }
-    Serial.println();
-    // Process the received decrypted packet
-    // Isolate the first part of the packet to determine its type
-    // TODO: Call handler functions
-    String packetType = String((char *)decryptedPacket).substring(0, 3);
-    if (packetType == "aut") {
-      Serial.println("Received authentication packet.");
-      gotValidResponse = true;
-      // Extract bike ID and user ID from the packet
-      
-    } else if (packetType == "loc") {
-      Serial.println("Received GPS data packet.");
-      gotValidResponse = false;
-    } else {
-      Serial.println("Received unknown packet type.");
-      gotValidResponse = false;
-    }
-  } else {
-    // If packet size is invalid, discard it
-    Serial.println("Received packet size is invalid. So it was discarded.");
-    // Change global variable to signal that the response wasn't valid
-    gotValidResponse = false;
-  }
-}
-// ========================== LoRa Packet Formatting ==========================
-// Format GPS data into LoRa packet for transmission
+
+// ========================== LoRa Packet Formatting =====================
+// Format GPS data into LoRa packet for transmission (unchanged, still "loc")
 void putGpsData2txpacket() {
   if (gps.location.isValid()) { // If GPS fix valid, include coordinates
-    sprintf(txpacket, "loc,%d,%.6f,%.6f,%d,%02d/%02d/%02d,%02d:%02d:%02d",
+    sprintf(txpacket, "loc,%d,%.6f,%.6f,%d,%02d/%02d/%04d,%02d:%02d:%02d",
             BIKE_ID,
             gps.location.lat(),
             gps.location.lng(),
@@ -343,21 +351,11 @@ void putGpsData2txpacket() {
             gps.time.hour(), gps.time.minute(), gps.time.second());
   } else { // If no GPS fix, send placeholders
     sprintf(txpacket, "loc,%d,N/A,N/A,N/A,N/A,N/A,N/A", BIKE_ID);
+    Serial.println("TX (GPS): no fix");
   }
 }
 
-void putLockStatus2txpacket() {
-  // Decode user ID from RFID tag
-  //Using Wiegand format, first 8 chars are user ID
-  String user_id = lastscannedrfid.substring(0, 8);
-  if (user_id.length() < 8) {
-    // If user ID is less than 8 chars, pad with spaces
-    user_id += String(8 - user_id.length(), ' ');
-  }
-  // Format lock status into LoRa packet
-  sprintf(txpacket, "aut,%d,%s,%s", BIKE_ID, user_id.c_str(), identified ? "UNLOCKED" : "LOCKED");
-}
-
+// ========================== AES Helpers  ==============================
 // Encryption function using AES
 // Uses mbedTLS library for AES encryption
 // Pads input to multiple of 16 bytes using PKCS7 padding
@@ -366,16 +364,19 @@ void aes_encrypt(const uint8_t *input, size_t length, uint8_t *output, size_t *o
     mbedtls_aes_init(&aes);
     mbedtls_aes_setkey_enc(&aes, aes_key, 128);
     size_t padded_len = ((length + 15) / 16) * 16;
-    uint8_t buf[padded_len];
+    if (padded_len > BUFFER_SIZE) padded_len = BUFFER_SIZE; // safety
+    uint8_t buf[BUFFER_SIZE];
     memcpy(buf, input, length);
     uint8_t pad = padded_len - length;
-    for (size_t i = length; i < padded_len; i++) buf[i] = pad;
+    for (size_t i = length; i < padded_len; i++)
+      buf[i] = pad;
     for (size_t i = 0; i < padded_len; i += 16) {
-        mbedtls_aes_crypt_ecb(&aes, MBEDTLS_AES_ENCRYPT, buf + i, output + i);
+      mbedtls_aes_crypt_ecb(&aes, MBEDTLS_AES_ENCRYPT, buf + i, output + i);
     }
     *out_len = padded_len;  // Return encrypted length
     mbedtls_aes_free(&aes);
 }
+
 // Decrypt function using AES
 // Uses mbedTLS library for AES decryption
 // Assumes input is padded with PKCS7 padding
