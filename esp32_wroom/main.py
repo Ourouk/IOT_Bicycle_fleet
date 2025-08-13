@@ -1,41 +1,113 @@
+# =========================================
+# Bike Parking Station (Micropython) - Simplified flows
+# =========================================
+# This firmware runs the “smart rack”:
+# - Controls a relay-based lock
+# - Uses a Grove Ultrasonic Ranger to detect a wheel present/absent
+# - Reads user and bike RFID via UART
+# - Talks to a backend over MQTT
+# Design notes:
+# - Two high-level flows:
+#     1) Locking flow  (user scans while unlocked -> place bike -> scan bike tag)
+#     2) Unlocking flow (user scans while locked -> remove bike -> scan again to relock)
+# - Authorization is round-tripped to the server using a user_auth request
+#   and an auth_response message back from the server.
+# - The ultrasonic sensor uses simple near/far thresholds with averaging.
+# - LEDs indicate status: red=locked, green=unlocked/parking guidance.
+# - Non-blocking LED blink helper avoids stalling the main loop.
+#
+# Safety:
+# - Timeouts are used to avoid being stuck in intermediate states.
+# - On timeout during unlock (bike not removed), the rack reverts to idle,
+#   leaving the relay on for safety and user retry (design choice; revisit if needed).
+#
+# Maintenance:
+# - All explanatory comments are kept or expanded to ease comprehension.
+# - If you need a minimal diff-based patch later, ask and I’ll provide one.
+# =========================================
+
 import time
-from machine import Pin, ADC, UART,time_pulse_us
+from machine import Pin, ADC, UART, time_pulse_us
 import network
 from umqtt.simple import MQTTClient
 import json
 from time import sleep_us
 
-# Constants for ultrasonic sensor
-_TIMEOUT1 = 1000  # Timeout for waiting for echo start
-_TIMEOUT2 = 1000  # Timeout for waiting for echo end
-
 # ========== CONFIGURATION ==========
 # Identifiers
-DEVICE_ID = "b01"  # Stack ID
+DEVICE_ID = "r01"  # Rack ID shown to the server and logs
 
-# WiFi credentials
+# WiFi credentials (AP provided by site router or hotspot)
 SSID = "RPiStation01"
 PASSWORD = "RPiStation01"
 
 # MQTT configuration
-# Note: Use device ID as the client ID for mqtt
-MQTT_SERVER = "192.199.2.254"  # Fixed IP address format
-TOPIC_PUB = "station/bornes/replies"  # Strings instead of bytes
-TOPIC_SUB = "station/bornes"
+# Note: Use device ID as the client ID for MQTT to keep sessions distinct
+MQTT_SERVER = "192.199.2.254"
+TOPIC_PUB = "station/rack/replies"  # outbound (from rack to server)
+TOPIC_SUB = "station/rack"          # inbound (from server to rack)
 
 # Debug configuration
-DEBUG_ENABLED = True  # Set to False to disable debug messages
-DEBUG_INTERVAL = 5    # Debug messages every 5 seconds
+DEBUG_ENABLED = True     # Set to False in production to reduce serial noise
+DEBUG_INTERVAL = 5       # Emit a status snapshot every N seconds
+
+# Grove Relay configuration
+RELAY_PIN = 5            # Set to your Grove relay SIG pin
+RELAY_ACTIVE_HIGH = True # True: relay ON when pin=1; False: relay ON when pin=0
+
+# Distance thresholds (cm) for the ultrasonic ranger
+# Hysteresis prevents relay chatter and state flapping:
+# - OBJECT_NEAR_CM: declare “object present” when distance <= this
+# - OBJECT_FAR_CM:  declare “object absent”  when distance >= this
+OBJECT_NEAR_CM = 20.0
+OBJECT_FAR_CM  = 30.0
+
+# Timeouts (seconds)
+# - AUTH_RESPONSE_TIMEOUT: wait time for server to approve/deny user
+# - LOCK_FLOW_TIMEOUT:     time allowed to place the bike after unlock
+# - UNLOCK_FLOW_TIMEOUT:   time allowed to remove the bike after unlock
+# - RELOCK_CONFIRM_TIMEOUT:time to re-present card to re-lock after removal
+AUTH_RESPONSE_TIMEOUT   = 500
+LOCK_FLOW_TIMEOUT       = 30000
+UNLOCK_FLOW_TIMEOUT     = 30000
+RELOCK_CONFIRM_TIMEOUT  = 30000
+
+# LED blink timing (visual feedback pacing)
+BLINK_SHORT = 0.2
+BLINK_LONG  = 0.5
 
 # ========== HARDWARE SETUP ==========
-led_red = Pin(2, Pin.OUT)      # Status LED (red)
+# LEDs:
+# - led_red: steady ON means “locked”
+# - led_green: steady ON means “unlocked / ready to park”; blinking guides actions
+led_red = Pin(2, Pin.OUT)       # Status LED (red)
 led_green = Pin(15, Pin.OUT)    # Parking indicator (green)
 
+# Relay wiring note:
+# - RELAY_ACTIVE_HIGH True -> .value(1) energizes relay (unlocked if lock is NC/NO accordingly)
+# - RELAY_ACTIVE_HIGH False -> .value(0) energizes relay
+if RELAY_ACTIVE_HIGH:
+    relay = Pin(RELAY_PIN, Pin.OUT, value=0)  # default OFF (locked)
+else:
+    relay = Pin(RELAY_PIN, Pin.OUT, value=1)  # default OFF (locked at inactive level)
 
-#==========Class to handle the GroveUltrasonic Ranger==
+def relay_on():
+    """Energize relay: unlock mechanical lock (depending on hardware)."""
+    relay.value(1 if RELAY_ACTIVE_HIGH else 0)
+
+def relay_off():
+    """De-energize relay: lock mechanical lock (depending on hardware)."""
+    relay.value(0 if RELAY_ACTIVE_HIGH else 1)
+
+# ========== Grove Ultrasonic Ranger ==========
+# Uses single-wire SIG pin with time-of-flight echo measure.
+# Timing constants are kept for clarity though the driver uses time_pulse_us.
+_TIMEOUT1 = 1000  # Timeout for waiting for echo start (not directly used here)
+_TIMEOUT2 = 1000  # Timeout for waiting for echo end   (not directly used here)
+
 class GroveUltrasonic:
+    """Minimal driver for Grove Ultrasonic Ranger (single SIG pin)."""
     def __init__(self, sig_pin, vcc_is_3v3=True):
-        # vcc_is_3v3 is just a reminder; no logic used.
         self.pin = Pin(sig_pin, Pin.OUT)
         self._low()
 
@@ -48,146 +120,182 @@ class GroveUltrasonic:
         self.pin.value(1)
 
     def distance_cm(self, timeout_us=30000):
-        # 1) Trigger: 10 µs high
+        """
+        Trigger a pulse and measure echo high time with time_pulse_us.
+        Returns distance in centimeters, or None on timeout.
+        Conversion constant ~58 us per cm (speed of sound roundtrip).
+        """
+        # 10 µs trigger pulse
         self._low()
         time.sleep_us(2)
         self._high()
         time.sleep_us(10)
         self._low()
 
-        # 2) Switch to input and time the echo high pulse
+        # Switch to input to read echo
         self.pin.init(Pin.IN)
-        t = time_pulse_us(self.pin, 1, timeout_us)  # waits for high, then measures high duration
-
+        t = time_pulse_us(self.pin, 1, timeout_us)
         if t < 0:
-            # -2: timed out waiting for high; -1: timed out while high
             return None
-
-        # 3) Convert to distance (cm). 58 us per cm is a common approximation.
         return t / 58.0
 
-# Initialize UART for RFID reader
+# Initialize UART for RFID reader (user and bike tags come over same UART)
 try:
-    rfid_uart = UART(1, baudrate=9600, tx=17, rx=16)  # Specify pins explicitly
+    rfid_uart = UART(1, baudrate=9600, tx=17, rx=16)  # Pinout: adjust per board
 except Exception as e:
     print(f"Warning: UART initialization failed: {e}")
-    rfid_uart = None
+    rfid_uart = None  # System can still run for diagnostics without RFID
 
-# Initialize ultrasonic sensor
+# Initialize ultrasonic sensor on SIG pin 12 (change if wired differently)
 ultrasonic_sensor = GroveUltrasonic(12)
 
-# Initialize LEDs
+# Initialize LEDs and relay to known safe state at boot
 led_red.off()
 led_green.off()
+relay_off()
 
 # ========== STATE VARIABLES ==========
-stack_available = True
+# Bike association:
+# - current_bike_id None -> rack is available
+# - set when a bike tag is read during locking flow
 current_bike_id = None
-last_park_request = None
-parking_confirmation_timeout = 30  # 30 seconds to park after confirmation
-client = None  # Initialize client variable
 
-# Debug variables
+# MQTT client handle (None until connected)
+client = None
+
+# Debug pacing
 last_debug_print = 0
+
+# Authorization handshake tracking:
+# - pending_auth_action: "lock" or "unlock" currently being authorized
+# - pending_auth_user: user ID we asked the server to approve
+# - awaiting_auth: True until an auth_response arrives (or we timeout)
+# - last_auth_result: the latest response payload from server (for this request)
+pending_auth_action = None
+pending_auth_user   = None
+awaiting_auth       = False
+auth_request_time   = 0
+last_auth_result    = None
+
+# High-level finite state machine (FSM)
+# Naming tries to reflect both user intent and hardware posture.
+STATE_IDLE                   = "idle"
+STATE_AUTH_LOCKING           = "auth_locking"            # waiting auth for locking flow
+STATE_LOCKING_UNLOCK_RELAY   = "locking_unlock_relay"    # relay energized, grant access
+STATE_LOCKING_WAIT_OBJECT    = "locking_wait_object"     # wait for wheel near
+STATE_LOCKING_READ_BIKE_RFID = "locking_read_bike_rfid"  # (kept for clarity; merged in WAIT_OBJECT)
+STATE_LOCKED                 = "locked"                  # red on, relay off
+
+STATE_AUTH_UNLOCKING         = "auth_unlocking"          # waiting auth for unlocking flow
+STATE_UNLOCKING_RELAY_ON     = "unlocking_relay_on"      # relay on, green on; user removes bike
+STATE_UNLOCKING_WAIT_RELOCK  = "unlocking_wait_relock"   # removed -> wait for user to re-scan to relock
+STATE_ERROR                  = "error"                   # generic error state (LEDs blink)
+
+# Current FSM state
+state = STATE_IDLE
+state_entered_at = time.time()
 
 # ========== HELPER FUNCTIONS ==========
 def debug_print(message):
-    """Print debug message if debug is enabled"""
+    """Guarded debug print to keep serial output manageable."""
     if DEBUG_ENABLED:
         print(f"[DEBUG] {message}")
 
+def now():
+    """Wall-clock seconds (float)."""
+    return time.time()
+
+def set_state(new_state):
+    """Transition FSM to a new state and timestamp the entry."""
+    global state, state_entered_at
+    state = new_state
+    state_entered_at = now()
+    debug_print(f"STATE -> {state}")
+
+def blink_led_nonblocking(led, period=0.6):
+    """
+    Non-blocking blinker to provide visual guidance without sleeping.
+    Call this repeatedly in the loop; it toggles the given LED based on time.
+    """
+    t = now()
+    phase = int((t * 1000) // int(period * 1000)) % 2
+    led.value(1 if phase == 0 else 0)
+    return True
+
+def solid_leds(green=False, red=False):
+    """Convenience to set LEDs to a steady state."""
+    led_green.value(1 if green else 0)
+    led_red.value(1 if red else 0)
+
 def get_distance(sensor=ultrasonic_sensor, timeout_us=30000, block=False):
     """
-    Read distance (cm) from the GroveUltrasonic.
-    - Returns None on timeout/out-of-range unless block=True.
-    - If block=True, keeps trying until a valid reading (2–400 cm) is obtained.
+    Single shot distance read with basic plausibility filter.
+    Returns None on invalid/timeout unless block=True (then retries forever).
     """
     while True:
-        dist = sensor.distance_cm(timeout_us=timeout_us)  # cm or None
+        dist = sensor.distance_cm(timeout_us=timeout_us)
         if dist is not None and 2 <= dist <= 400:
             return dist
         if not block:
             return None
 
 def measure_distance(sensor=ultrasonic_sensor, samples=5, delay_ms=10, retries=2, retry_delay_ms=5):
-    """Read distance with multiple samples, handle None safely, basic filtering, and debug logs."""
+    """
+    Take multiple readings and average valid ones to reduce noise.
+    Returns averaged cm value or None if all attempts fail.
+    """
     try:
-        readings = []
-        raw_values = []  # approximate echo pulse widths in µs for debug (or None)
-
+        readings, raw_values = [], []
         for _ in range(samples):
-            # Optional small retry loop to reduce transient None readings
             distance = None
             for _ in range(retries + 1):
-                distance = get_distance(sensor)  # may return None
+                distance = get_distance(sensor)
                 if distance is not None:
                     break
                 time.sleep_ms(retry_delay_ms)
-
-            # Log raw pulse estimate if we have a valid distance; else keep None
+            raw_values.append(int(distance * 58) if distance is not None else None)
             if distance is not None:
-                raw_values.append(int(distance * 58))  # µs
                 readings.append(distance)
-            else:
-                raw_values.append(None)
-
             time.sleep_ms(delay_ms)
-
-        # Filter out invalid readings
-        valid_readings = [r for r in readings if r > 0]
-
-        if not valid_readings:
-            debug_print(f"DISTANCE - No valid readings obtained | raw={raw_values}")
+        valid = [r for r in readings if r > 0]
+        if not valid:
+            debug_print(f"DISTANCE - No valid readings | raw={raw_values}")
             return None
-
-        avg_distance = sum(valid_readings) / len(valid_readings)
-
-        # Debug output
-        debug_print(f"DISTANCE - Raw durations (µs): {raw_values}")
-        debug_print(f"DISTANCE - Distance readings (cm): {readings}")
-        debug_print(f"DISTANCE - Average distance: {avg_distance:.1f}cm")
-
-        # Return distance if reasonable (between 2 cm and 400 cm)
-        result = avg_distance if 2 <= avg_distance <= 400 else None
-        debug_print(f"DISTANCE - Final result: {result}")
-        return result
-
-    except Exception as e:
-        debug_print(f"DISTANCE - Error: {e}")
-        print(f"Error reading ultrasonic sensor: {e}")
-        return None
-
-
+        avg_distance = sum(valid) / len(valid)
+        debug_print(f"DISTANCE - avg={avg_distance:.1f}cm readings={readings}")
+        return avg_distance if 2 <= avg_distance <= 400 else None
     except Exception as e:
         debug_print(f"DISTANCE - Error: {e}")
         print(f"Error reading ultrasonic sensor: {e}")
         return None
 
 def connect_wifi(ssid, password, timeout=20):
+    """
+    Connect to WiFi STA. Retries up to `timeout` seconds.
+    Returns WLAN interface on success, raises on failure.
+    """
     sta = network.WLAN(network.STA_IF)
     sta.active(True)
-
     if sta.isconnected():
         print("Already connected to WiFi:", sta.ifconfig())
         return sta
-
     print(f"Connecting to WiFi: {ssid}")
     sta.connect(ssid, password)
-
     count = 0
     while not sta.isconnected() and count < timeout:
-        time.sleep(1)
-        count += 1
+        time.sleep(1); count += 1
         if count % 5 == 0:
             print(f"Still connecting... ({count}/{timeout})")
-
     if not sta.isconnected():
         raise RuntimeError(f"Could not connect to WiFi after {timeout} seconds")
-
     print("WiFi connected:", sta.ifconfig())
     return sta
 
 def connect_mqtt(DEVICE_ID, server, timeout=10):
+    """
+    Establish MQTT connection and return client object.
+    Note: keepalive set to 60s; reconnection is handled in main loop.
+    """
     try:
         mqtt_client = MQTTClient(DEVICE_ID, server, keepalive=60)
         mqtt_client.connect()
@@ -198,244 +306,220 @@ def connect_mqtt(DEVICE_ID, server, timeout=10):
         return None
 
 def publish_data(client, payload):
+    """
+    Publish JSON payload to TOPIC_PUB. Returns True on success.
+    This function centralizes printing and error handling.
+    """
     if client is None:
         print("MQTT client not connected")
         return False
     try:
         message = json.dumps(payload)
-        client.publish(TOPIC_PUB, message)
+        client.publish(TOPIC_PUB, message.encode("utf-8"))
         print("Data sent:", payload)
         return True
     except Exception as e:
         print(f"Failed to publish data: {e}")
         return False
 
+# ========== AUTH AND FLOW HELPERS ==========
+def send_user_auth(user_id, action):
+    """
+    Publish an authorization request to the server and start waiting.
+    action: "lock" | "unlock"
+    The server should respond with an 'auth_response' carrying status ok/denied.
+    """
+    global awaiting_auth, pending_auth_action, pending_auth_user, auth_request_time, last_auth_result
+    payload = {
+        'type': 'user_auth',
+        'rack_id': DEVICE_ID,
+        'user_id': user_id,
+        'action': action,  # "lock" or "unlock"
+        'timestamp': now()
+    }
+    publish_data(client, payload)
+    awaiting_auth = True
+    pending_auth_action = action
+    pending_auth_user = user_id
+    auth_request_time = now()
+    last_auth_result = None
+    debug_print(f"Auth requested: user={user_id} action={action}")
+
+def handle_auth_response(payload):
+    """
+    Process inbound auth response.
+    Expected payload:
+    {'type':'auth_response','rack_id':'r01','user_id':'...','action':'lock|unlock','status':'ok|denied'}
+    Only handles responses matching the pending request (rack, user, action).
+    """
+    global awaiting_auth, last_auth_result
+    if not awaiting_auth:
+        return
+    if payload.get('rack_id') != DEVICE_ID:
+        return
+    if payload.get('action') != pending_auth_action:
+        return
+    if payload.get('user_id') != pending_auth_user:
+        return
+    last_auth_result = payload
+    awaiting_auth = False
+    debug_print(f"Auth response: {payload}")
+
 def read_rfid():
-    """Read RFID tag from UART"""
+    """
+    Read a frame from UART (RFID reader).
+    Returns a decoded string (user or bike tag) or None if nothing/invalid.
+    """
     if rfid_uart is None:
         debug_print("RFID - UART not initialized")
         return None
-
     try:
-        # Check if data is available
         bytes_available = rfid_uart.any()
-        debug_print(f"RFID - Bytes available: {bytes_available}")
-
         if bytes_available:
             rfid_data = rfid_uart.read()
-            debug_print(f"RFID - Raw data: {rfid_data}")
-
             if rfid_data:
                 try:
                     decoded = rfid_data.decode('utf-8').strip()
-                    debug_print(f"RFID - Decoded: '{decoded}', Length: {len(decoded)}")
-
                     if len(decoded) > 0:
-                        debug_print(f"RFID - Valid tag detected: '{decoded}'")
                         return decoded
-                    else:
-                        debug_print("RFID - Empty string after decoding")
-                except UnicodeDecodeError as de:
-                    debug_print(f"RFID - Decode error: {de}")
+                except UnicodeDecodeError:
+                    # Some readers output raw binary; ignore undecodable noise
                     return None
-        else:
-            debug_print("RFID - No data available")
-
     except Exception as e:
         debug_print(f"RFID - Exception: {e}")
         print(f"Error reading RFID: {e}")
-
-    debug_print("RFID - Returning None")
     return None
 
-def check_bike_parked():
-    """Check if bike is properly parked (distance + RFID)"""
-    debug_print("BIKE_PARKED - Starting check")
-    debug_print(f"BIKE_PARKED - Current expected bike ID: {current_bike_id}")
-
-    # Get distance measurement
+def print_system_status():
+    """
+    Human-friendly snapshot printed periodically for diagnostics.
+    Shows connectivity, state, sensors, and relay posture.
+    """
+    available = (current_bike_id is None)
+    print("\n" + "="*50)
+    print("SYSTEM STATUS REPORT")
+    print("="*50)
+    print(f"Device ID: {DEVICE_ID}")
+    print(f"Available: {available}")
+    print(f"Current Bike ID: {current_bike_id}")
+    print(f"WiFi Connected: {sta.isconnected() if 'sta' in globals() else 'Unknown'}")
+    print(f"MQTT Connected: {client is not None}")
     distance = measure_distance()
-    debug_print(f"BIKE_PARKED - Distance measurement: {distance}")
+    rfid = read_rfid()
+    print(f"Current Distance: {distance}")
+    print(f"Current RFID (peek): {rfid}")
+    print(f"Relay State: {'ON' if (relay.value()==(1 if RELAY_ACTIVE_HIGH else 0)) else 'OFF'}")
+    print(f"State Machine: {state}")
+    print("="*50 + "\n")
 
-    if distance is None:
-        result = (False, "Distance sensor error")
-        debug_print(f"BIKE_PARKED - {result}")
-        return result
+def object_present():
+    """Return (True, distance_cm) when wheel is near; else (False, distance or None)."""
+    d = measure_distance()
+    return (d is not None) and (d <= OBJECT_NEAR_CM), d
 
-    if distance > 20:
-        result = (False, f"Distance too far: {distance:.1f}cm (threshold: 20cm)")
-        debug_print(f"BIKE_PARKED - {result}")
-        return result
+def object_absent():
+    """Return (True, distance_cm) when wheel is far/removed; else (False, distance or None)."""
+    d = measure_distance()
+    return (d is not None) and (d >= OBJECT_FAR_CM), d
 
-    debug_print(f"BIKE_PARKED - Distance OK: {distance:.1f}cm <= 20cm")
+def set_locked_outputs():
+    """
+    Locked posture:
+    - Green OFF (not accepting insertion)
+    - Red ON   (locked)
+    - Relay OFF (de-energized -> locked, wiring dependent)
+    """
+    led_green.off()
+    led_red.on()
+    relay_off()
 
-    # Get RFID reading
-    rfid_tag = read_rfid()
-    debug_print(f"BIKE_PARKED - RFID reading: '{rfid_tag}'")
+def set_unlocked_outputs():
+    """
+    Unlocked posture:
+    - Green ON  (guidance: you can insert/remove)
+    - Red OFF
+    - Relay ON  (energized -> unlocked, wiring dependent)
+    """
+    led_green.on()
+    led_red.off()
+    relay_on()
 
-    if rfid_tag is None:
-        result = (False, "No RFID detected")
-        debug_print(f"BIKE_PARKED - {result}")
-        return result
-
-    debug_print(f"BIKE_PARKED - Comparing RFID: expected='{current_bike_id}', got='{rfid_tag}'")
-
-    if current_bike_id and rfid_tag == current_bike_id:
-        result = (True, f"RFID matched: {rfid_tag}")
-        debug_print(f"BIKE_PARKED - SUCCESS: {result}")
-        return result
-
-    result = (False, f"RFID mismatch: expected '{current_bike_id}', got '{rfid_tag}'")
-    debug_print(f"BIKE_PARKED - {result}")
-    return result
-
+# ========== MQTT CALLBACK ==========
 def mqtt_callback(topic, msg):
-    """Handle incoming MQTT messages"""
-    global stack_available, current_bike_id, last_park_request
-
+    """
+    Handle inbound MQTT messages on TOPIC_SUB.
+    In this simplified version, we only process 'auth_response'.
+    """
+    global client
     try:
-        # Decode bytes to string first
         if isinstance(msg, bytes):
             msg = msg.decode('utf-8')
-
         payload = json.loads(msg)
         print("Received MQTT message:", payload)
 
-        if payload.get('type') == 'park_request':
-            bike_id = payload.get('bike_id')
-            target_stack = payload.get('stack_id', DEVICE_ID)
+        mtype = payload.get('type')
 
-            debug_print(f"MQTT - Park request: bike_id='{bike_id}', target_stack='{target_stack}', this_device='{DEVICE_ID}'")
-
-            # Check if this message is for this stack
-            if target_stack != DEVICE_ID:
-                debug_print(f"MQTT - Message not for this device, ignoring")
-                return
-
-            if stack_available:
-                # Confirm parking availability
-                confirm_msg = {
-                    'type': 'park_confirm',
-                    'stack_id': DEVICE_ID,
-                    'bike_id': bike_id,
-                    'status': 'available',
-                    'timestamp': time.time()
-                }
-                publish_data(client, confirm_msg)
-                current_bike_id = bike_id
-                last_park_request = time.time()
-                stack_available = False
-
-                debug_print(f"MQTT - Parking confirmed, updated state: current_bike_id='{current_bike_id}', stack_available={stack_available}")
-
-                # Blink green LED to indicate parking allowed
-                print(f"Parking confirmed for bike {bike_id}")
-                for _ in range(3):
-                    led_green.on()
-                    time.sleep(0.3)
-                    led_green.off()
-                    time.sleep(0.3)
-            else:
-                # Reject parking request
-                reject_msg = {
-                    'type': 'park_reject',
-                    'stack_id': DEVICE_ID,
-                    'bike_id': bike_id,
-                    'status': 'occupied',
-                    'timestamp': time.time()
-                }
-                publish_data(client, reject_msg)
-                debug_print(f"MQTT - Parking rejected, stack occupied")
-                print(f"Parking rejected for bike {bike_id} - stack occupied")
-
-        elif payload.get('type') == 'status_request':
-            # Respond with current status
-            status_msg = {
-                'type': 'status_response',
-                'stack_id': DEVICE_ID,
-                'available': stack_available,
-                'current_bike': current_bike_id,
-                'timestamp': time.time()
-            }
-            publish_data(client, status_msg)
-            debug_print(f"MQTT - Status response sent: available={stack_available}, current_bike='{current_bike_id}'")
+        # Only process auth responses now (park_confirm/reject/status_request removed)
+        if mtype == 'auth_response':
+            handle_auth_response(payload)
 
     except Exception as e:
         print(f"Error processing MQTT message: {e}")
         debug_print(f"MQTT - Exception: {e}")
 
-def blink_led(led, times=1, delay=0.5):
-    """Helper function to blink LED"""
-    for _ in range(times):
-        led.on()
-        time.sleep(delay)
-        led.off()
-        time.sleep(delay)
-
-def print_system_status():
-    """Print comprehensive system status"""
-    print("\n" + "="*50)
-    print("SYSTEM STATUS REPORT")
-    print("="*50)
-    print(f"Device ID: {DEVICE_ID}")
-    print(f"Stack Available: {stack_available}")
-    print(f"Current Bike ID: {current_bike_id}")
-    print(f"Last Park Request: {last_park_request}")
-    print(f"WiFi Connected: {sta.isconnected() if 'sta' in globals() else 'Unknown'}")
-    print(f"MQTT Connected: {client is not None}")
-
-    # Get current sensor readings
-    distance = measure_distance()
-    rfid = read_rfid()
-    bike_status = check_bike_parked()
-
-    print(f"Current Distance: {distance}")
-    print(f"Current RFID: {rfid}")
-    print(f"Bike Parked Status: {bike_status}")
-    print("="*50 + "\n")
-
 # ========== MAIN PROGRAM ==========
 try:
-    # Connect to WiFi
     print("Starting bike parking system...")
     debug_print("System initialization started")
+
+    # 1) Bring up WiFi
     sta = connect_wifi(SSID, PASSWORD)
 
-    # Indicate WiFi connected
-    blink_led(led_green, 3, 0.2)
+    # Visual feedback: quick green blink = WiFi OK
+    for _ in range(3):
+        led_green.on(); time.sleep(0.2)
+        led_green.off(); time.sleep(0.2)
 
-    # Connect to MQTT broker
+    # 2) Connect to MQTT and subscribe for control messages
     client = connect_mqtt(DEVICE_ID, MQTT_SERVER)
     if client:
         client.set_callback(mqtt_callback)
         client.subscribe(TOPIC_SUB)
         print(f"Subscribed to {TOPIC_SUB}")
-        blink_led(led_green, 5, 0.1)
+        # Visual feedback: a few faster blinks
+        for _ in range(5):
+            led_green.on(); time.sleep(0.1)
+            led_green.off(); time.sleep(0.1)
 
-    # Initialize timing variables
+    # Init timers for periodic tasks
     last_heartbeat = 0
     last_mqtt_reconnect = 0
     last_status_check = 0
     last_debug_print = 0
-    mqtt_reconnect_interval = 30
-    heartbeat_interval = 30
-    status_check_interval = 2
+    mqtt_reconnect_interval = 30   # seconds between reconnect attempts
+    heartbeat_interval = 30        # seconds between heartbeats
+    status_check_interval = 0.2    # loop pacing for FSM
 
     print("System ready - entering main loop")
     debug_print("Main loop started")
 
-    while True:
-        current_time = time.time()
+    # Start from a conservative secure posture: locked
+    set_state(STATE_IDLE)
+    set_locked_outputs()
 
-        # Print periodic debug information
+    # ========== MAIN LOOP ==========
+    while True:
+        current_time = now()
+
+        # 0) Periodic debug snapshot for maintenance (optional in production)
         if DEBUG_ENABLED and (current_time - last_debug_print > DEBUG_INTERVAL):
             print_system_status()
             last_debug_print = current_time
 
-        # Check WiFi connection
+        # 1) Ensure WiFi stays up; try to recover if needed
         if not sta.isconnected():
             print("WiFi disconnected, attempting reconnection...")
-            led_red.on()
+            led_red.on()  # indicate connectivity issue
             try:
                 sta = connect_wifi(SSID, PASSWORD)
                 led_red.off()
@@ -444,12 +528,11 @@ try:
                 print(f"WiFi reconnection failed: {e}")
                 debug_print(f"WiFi reconnection failed: {e}")
                 time.sleep(5)
-                continue
+                continue  # retry loop
 
-        # Check MQTT connection and reconnect if needed
+        # 2) Ensure MQTT stays up; reconnect periodically if dropped
         if client is None and (current_time - last_mqtt_reconnect > mqtt_reconnect_interval):
             print("Attempting MQTT reconnection...")
-            debug_print("Attempting MQTT reconnection...")
             client = connect_mqtt(DEVICE_ID, MQTT_SERVER)
             if client:
                 client.set_callback(mqtt_callback)
@@ -458,122 +541,202 @@ try:
                 debug_print("MQTT reconnected successfully")
             last_mqtt_reconnect = current_time
 
-        # Check for incoming MQTT messages
+        # 3) Drain inbound MQTT (auth responses)
         if client:
             try:
-                client.check_msg()
+                client.check_msg()  # non-blocking; invokes mqtt_callback
             except Exception as e:
                 print(f"MQTT check_msg error: {e}")
                 debug_print(f"MQTT check_msg error: {e}")
-                client = None  # Force reconnection
+                client = None  # Force reconnection next cycle
 
-        # Send heartbeat periodically
+        # 4) Heartbeat: advertise status so server has fresh view without polling
         if current_time - last_heartbeat > heartbeat_interval:
             heartbeat_msg = {
                 'type': 'heartbeat',
-                'stack_id': DEVICE_ID,
+                'rack_id': DEVICE_ID,
                 'status': 'active',
-                'available': stack_available,
+                'available': (current_bike_id is None),  # derived availability
                 'current_bike': current_bike_id,
+                'state': state,
                 'timestamp': current_time
             }
             if publish_data(client, heartbeat_msg):
                 last_heartbeat = current_time
-                debug_print("Heartbeat sent successfully")
-            else:
-                client = None  # Force reconnection on publish failure
-                debug_print("Heartbeat failed, forcing reconnection")
 
-        # Handle parking confirmation timeout
-        if (last_park_request and
-            (current_time - last_park_request > parking_confirmation_timeout)):
-            print("Parking confirmation timed out")
-            debug_print(f"Parking timeout: {current_time - last_park_request}s > {parking_confirmation_timeout}s")
-            timeout_msg = {
-                'type': 'park_timeout',
-                'stack_id': DEVICE_ID,
-                'bike_id': current_bike_id,
-                'timestamp': current_time
-            }
-            publish_data(client, timeout_msg)
+        # 5) Main FSM logic (single-pass each loop)
+        # Read any RFID now; value can be user (start flow) or bike (during lock)
+        rfid = read_rfid()
 
-            last_park_request = None
-            stack_available = True
-            current_bike_id = None
-            led_green.off()
-            debug_print("State reset due to timeout")
-
-        # Regular status checks
-        if current_time - last_status_check > status_check_interval:
-            debug_print("Starting regular status check")
-
-            # Check if bike is properly parked
-            if not stack_available and current_bike_id:
-                debug_print("Checking if expected bike is properly parked")
-                is_parked, status_msg = check_bike_parked()
-                debug_print(f"Park check result: {is_parked}, {status_msg}")
-
-                if is_parked:
-                    success_msg = {
-                        'type': 'park_success',
-                        'stack_id': DEVICE_ID,
-                        'bike_id': current_bike_id,
-                        'status': 'parked',
-                        'timestamp': current_time
-                    }
-                    publish_data(client, success_msg)
-                    print(f"Bike {current_bike_id} successfully parked")
-                    debug_print(f"Bike successfully parked: {current_bike_id}")
-                    last_park_request = None
-                    led_green.on()  # Keep green LED on when bike is parked
-
-            # Check for unexpected bike presence
-            elif stack_available:
-                debug_print("Stack available - checking for unexpected bike")
-                distance = measure_distance()
-                debug_print(f"Distance check for unexpected bike: {distance}")
-
-                if distance is not None and distance < 20:
-                    print("Unexpected bike detected")
-                    debug_print(f"Unexpected bike detected at distance {distance}cm")
-                    stack_available = False
-                    current_bike_id = "unknown"
-                    error_msg = {
-                        'type': 'error',
-                        'stack_id': DEVICE_ID,
-                        'message': 'Unexpected bike detected',
-                        'distance': distance,
-                        'timestamp': current_time
-                    }
-                    publish_data(client, error_msg)
-                    led_green.off()
+        if state == STATE_IDLE:
+            # Idle posture: waiting for a user to scan a card
+            # Decision is based on relay posture:
+            # - If relay is ON (unlocked), we expect a locking flow (place bike)
+            # - If relay is OFF (locked), we expect an unlocking flow (remove bike)
+            if rfid:
+                relay_is_on = (relay.value() == (1 if RELAY_ACTIVE_HIGH else 0))
+                if relay_is_on:
+                    # Start locking flow: authorize user who wants to lock a bike
+                    send_user_auth(user_id=rfid, action="lock")
+                    set_state(STATE_AUTH_LOCKING)
                 else:
-                    led_green.off()  # Ensure LED is off when no bike
-                    if distance is not None:
-                        debug_print(f"No bike detected, distance: {distance}cm")
+                    # Start unlocking flow: authorize user who wants to remove a bike
+                    send_user_auth(user_id=rfid, action="unlock")
+                    set_state(STATE_AUTH_UNLOCKING)
 
-            last_status_check = current_time
-            debug_print("Status check completed")
+        elif state == STATE_AUTH_LOCKING:
+            # Waiting for server approval to proceed with locking flow
+            if not awaiting_auth and last_auth_result:
+                if last_auth_result.get('status') == 'ok':
+                    # Grant access: unlock and guide user to insert wheel
+                    set_unlocked_outputs()
+                    set_state(STATE_LOCKING_UNLOCK_RELAY)
+                else:
+                    # Denied: flash red briefly and return to idle (still locked)
+                    led_red.on(); time.sleep(1); led_red.off()
+                    set_state(STATE_IDLE)
+            elif (now() - auth_request_time) > AUTH_RESPONSE_TIMEOUT:
+                # Server didn’t reply in time; report and go back to idle
+                publish_data(client, {
+                    'type': 'error', 'rack_id': DEVICE_ID,
+                    'message': 'auth_timeout_lock', 'timestamp': now()
+                })
+                set_state(STATE_IDLE)
 
-        time.sleep(0.1)  # Small delay to prevent CPU overload
+        elif state == STATE_LOCKING_UNLOCK_RELAY:
+            # Relay is ON (unlocked). We wait until an object is detected near.
+            present, dist = object_present()
+            if present:
+                # Bike is in position; move to the stage where we expect bike tag
+                set_state(STATE_LOCKING_WAIT_OBJECT)
+            elif (now() - state_entered_at) > LOCK_FLOW_TIMEOUT:
+                # User didn’t place the bike in time; close and inform server
+                set_locked_outputs()
+                publish_data(client, {
+                    'type': 'lock_timeout', 'rack_id': DEVICE_ID, 'timestamp': now()
+                })
+                set_state(STATE_IDLE)
+            else:
+                # Keep unlocked to let the user try
+                set_unlocked_outputs()
+
+        elif state == STATE_LOCKING_WAIT_OBJECT:
+            # Blink green as guidance: “present bike tag now”
+            blink_led_nonblocking(led_green, period=0.6)
+            present, dist = object_present()
+            if present:
+                if rfid:
+                    # Treat this scan as the bike RFID and finalize lock
+                    current_bike_id = rfid
+                    publish_data(client, {
+                        'type': 'lock', 'rack_id': DEVICE_ID,
+                        'bike_id': current_bike_id,
+                        'user_id': pending_auth_user,
+                        'timestamp': now()
+                    })
+                    set_locked_outputs()
+                    set_state(STATE_LOCKED)
+            elif (now() - state_entered_at) > LOCK_FLOW_TIMEOUT:
+                # Took too long with no valid placement/tag
+                set_locked_outputs()
+                publish_data(client, {
+                    'type': 'error', 'rack_id': DEVICE_ID,
+                    'message': 'lock_flow_timeout', 'timestamp': now()
+                })
+                set_state(STATE_IDLE)
+
+        elif state == STATE_LOCKED:
+            # Locked posture: red steady. A user scan here means “try to unlock”.
+            if rfid:
+                send_user_auth(user_id=rfid, action="unlock")
+                set_state(STATE_AUTH_UNLOCKING)
+
+        elif state == STATE_AUTH_UNLOCKING:
+            # Waiting for server approval to unlock (bike removal)
+            if not awaiting_auth and last_auth_result:
+                if last_auth_result.get('status') == 'ok':
+                    # Grant access: unlock so the user can remove the bike
+                    set_unlocked_outputs()
+                    set_state(STATE_UNLOCKING_RELAY_ON)
+                else:
+                    # Denied: brief red flash; remain locked
+                    led_red.on(); time.sleep(1); led_red.off()
+                    set_state(STATE_LOCKED)
+            elif (now() - auth_request_time) > AUTH_RESPONSE_TIMEOUT:
+                # No server response; report and stay locked
+                publish_data(client, {
+                    'type': 'error', 'rack_id': DEVICE_ID,
+                    'message': 'auth_timeout_unlock', 'timestamp': now()
+                })
+                set_state(STATE_LOCKED)
+
+        elif state == STATE_UNLOCKING_RELAY_ON:
+            # Relay ON; wait for the wheel to move far enough (bike removed)
+            absent, dist = object_absent()
+            if absent:
+                # Bike seems removed; now require user to re-scan to confirm re-lock
+                set_state(STATE_UNLOCKING_WAIT_RELOCK)
+            elif (now() - state_entered_at) > UNLOCK_FLOW_TIMEOUT:
+                # User didn’t remove in time -> visual warning, then leave unlocked
+                for _ in range(6):
+                    led_green.on(); led_red.on(); time.sleep(0.2)
+                    led_green.off(); led_red.off(); time.sleep(0.2)
+                # Design choice: remain unlocked to avoid trapping
+                set_unlocked_outputs()
+                set_state(STATE_IDLE)
+
+        elif state == STATE_UNLOCKING_WAIT_RELOCK:
+            # Green blinks to ask the user to tap again to confirm re-lock
+            blink_led_nonblocking(led_green, period=0.4)
+            if rfid:
+                # Finalize: lock, notify server, clear bike association
+                set_locked_outputs()
+                publish_data(client, {
+                    'type': 'unlock', 'rack_id': DEVICE_ID,
+                    'bike_id': current_bike_id,
+                    'user_id': pending_auth_user,
+                    'timestamp': now()
+                })
+                current_bike_id = None
+                set_state(STATE_IDLE)
+            elif (now() - state_entered_at) > RELOCK_CONFIRM_TIMEOUT:
+                # User walked away without confirming; warn, then lock for safety
+                for _ in range(6):
+                    led_green.on(); led_red.on(); time.sleep(0.2)
+                    led_green.off(); led_red.off(); time.sleep(0.2)
+                # Note: This behavior can be revisited (TODO marker kept intentionally)
+                set_locked_outputs()  # TODO: Review desired behavior with ops
+                set_state(STATE_IDLE)
+
+        elif state == STATE_ERROR:
+            # Generic error: blink both LEDs. System can be reset or recover.
+            blink_led_nonblocking(led_red, period=0.6)
+            blink_led_nonblocking(led_green, period=0.6)
+            pass
+
+        # Small delay to avoid hogging the CPU (keeps loop responsive)
+        time.sleep(0.05)
 
 except KeyboardInterrupt:
+    # Graceful shutdown on Ctrl+C during development
     print("\nProcess stopped by user")
     debug_print("Process interrupted by user")
 
 except Exception as e:
+    # Top-level catch: indicate fault and keep red ON
     print(f"Unexpected error: {e}")
     debug_print(f"Unexpected error: {e}")
     led_red.on()
 
 finally:
+    # Always try to clean up networking and outputs
     print("Cleaning up...")
     debug_print("Starting cleanup")
     try:
         if client:
             disconnect_msg = {
                 'type': 'disconnect',
-                'stack_id': DEVICE_ID,
+                'rack_id': DEVICE_ID,
                 'timestamp': time.time()
             }
             publish_data(client, disconnect_msg)
@@ -584,8 +747,9 @@ finally:
         print(f"Error during cleanup: {e}")
         debug_print(f"Cleanup error: {e}")
 
-    # Turn off all LEDs
+    # Ensure hardware is left in a safe, silent state
     led_red.off()
     led_green.off()
-    debug_print("LEDs turned off")
+    relay_off()
+    debug_print("LEDs and relay turned off")
     print("System shutdown complete")
