@@ -59,18 +59,18 @@ RELAY_ACTIVE_HIGH = True # True: relay ON when pin=1; False: relay ON when pin=0
 # Hysteresis prevents relay chatter and state flapping:
 # - OBJECT_NEAR_CM: declare “object present” when distance <= this
 # - OBJECT_FAR_CM:  declare “object absent”  when distance >= this
-OBJECT_NEAR_CM = 20.0
-OBJECT_FAR_CM  = 30.0
+OBJECT_NEAR_CM = 3.0 # Min values that the sensor can see
+OBJECT_FAR_CM  = 11.0 # Max values when lock is engaged
 
 # Timeouts (seconds)
 # - AUTH_RESPONSE_TIMEOUT: wait time for server to approve/deny user
 # - LOCK_FLOW_TIMEOUT:     time allowed to place the bike after unlock
 # - UNLOCK_FLOW_TIMEOUT:   time allowed to remove the bike after unlock
 # - RELOCK_CONFIRM_TIMEOUT:time to re-present card to re-lock after removal
-AUTH_RESPONSE_TIMEOUT   = 500
-LOCK_FLOW_TIMEOUT       = 30000
-UNLOCK_FLOW_TIMEOUT     = 30000
-RELOCK_CONFIRM_TIMEOUT  = 30000
+AUTH_RESPONSE_TIMEOUT   = 1
+LOCK_FLOW_TIMEOUT       = 30
+UNLOCK_FLOW_TIMEOUT     = 30
+RELOCK_CONFIRM_TIMEOUT  = 30
 
 # LED blink timing (visual feedback pacing)
 BLINK_SHORT = 0.2
@@ -354,12 +354,16 @@ def handle_auth_response(payload):
     """
     global awaiting_auth, last_auth_result
     if not awaiting_auth:
+        debug_print("Received auth response but not awaiting any")
         return
     if payload.get('rack_id') != DEVICE_ID:
+        debug_print(f"Auth response for wrong rack: {payload.get('rack_id')} != {DEVICE_ID}")
         return
     if payload.get('action') != pending_auth_action:
+        debug_print(f"Auth response for wrong action: {payload.get('action')} != {pending_auth_action}")
         return
     if payload.get('user_id') != pending_auth_user:
+        debug_print(f"Auth response for wrong user: {payload.get('user_id')} != {pending_auth_user}")
         return
     last_auth_result = payload
     awaiting_auth = False
@@ -415,12 +419,7 @@ def print_system_status():
 def object_present():
     """Return (True, distance_cm) when wheel is near; else (False, distance or None)."""
     d = measure_distance()
-    return (d is not None) and (d <= OBJECT_NEAR_CM), d
-
-def object_absent():
-    """Return (True, distance_cm) when wheel is far/removed; else (False, distance or None)."""
-    d = measure_distance()
-    return (d is not None) and (d >= OBJECT_FAR_CM), d
+    return (d is not None) and (OBJECT_NEAR_CM <= d <= OBJECT_FAR_CM), d
 
 def set_locked_outputs():
     """
@@ -567,15 +566,14 @@ try:
         # 5) Main FSM logic (single-pass each loop)
         # Read any RFID now; value can be user (start flow) or bike (during lock)
         rfid = read_rfid()
-
+        # =============== Waiting State ===========================
         if state == STATE_IDLE:
             # Idle posture: waiting for a user to scan a card
             # Decision is based on relay posture:
-            # - If relay is ON (unlocked), we expect a locking flow (place bike)
-            # - If relay is OFF (locked), we expect an unlocking flow (remove bike)
+            # - If a bike is currently not present, we expect a lock flow.
+            # - If a bike is currently present, we expect an unlock flow.
             if rfid:
-                relay_is_on = (relay.value() == (1 if RELAY_ACTIVE_HIGH else 0))
-                if relay_is_on:
+                if current_bike_id is None:
                     # Start locking flow: authorize user who wants to lock a bike
                     send_user_auth(user_id=rfid, action="lock")
                     set_state(STATE_AUTH_LOCKING)
@@ -583,11 +581,11 @@ try:
                     # Start unlocking flow: authorize user who wants to remove a bike
                     send_user_auth(user_id=rfid, action="unlock")
                     set_state(STATE_AUTH_UNLOCKING)
-
+        # =============== Locking Flow ===============================
         elif state == STATE_AUTH_LOCKING:
             # Waiting for server approval to proceed with locking flow
             if not awaiting_auth and last_auth_result:
-                if last_auth_result.get('status') == 'ok':
+                if last_auth_result.get('reply') == 'accept':
                     # Grant access: unlock and guide user to insert wheel
                     set_unlocked_outputs()
                     set_state(STATE_LOCKING_UNLOCK_RELAY)
@@ -629,13 +627,16 @@ try:
                     # Treat this scan as the bike RFID and finalize lock
                     current_bike_id = rfid
                     publish_data(client, {
-                        'type': 'lock', 'rack_id': DEVICE_ID,
+                        'type': 'lock',
+                        'rack_id': DEVICE_ID,
                         'bike_id': current_bike_id,
                         'user_id': pending_auth_user,
                         'timestamp': now()
                     })
                     set_locked_outputs()
-                    set_state(STATE_LOCKED)
+                    pending_auth_user = None
+                    # Go back to idle
+                    set_state(STATE_IDLE)
             elif (now() - state_entered_at) > LOCK_FLOW_TIMEOUT:
                 # Took too long with no valid placement/tag
                 set_locked_outputs()
@@ -643,18 +644,15 @@ try:
                     'type': 'error', 'rack_id': DEVICE_ID,
                     'message': 'lock_flow_timeout', 'timestamp': now()
                 })
+                # Clear user info NOTE: we keep bike_id for the rack to know what it hosts
+                
                 set_state(STATE_IDLE)
 
-        elif state == STATE_LOCKED:
-            # Locked posture: red steady. A user scan here means “try to unlock”.
-            if rfid:
-                send_user_auth(user_id=rfid, action="unlock")
-                set_state(STATE_AUTH_UNLOCKING)
-
+        # =============== Unlocking Flow ===============================
         elif state == STATE_AUTH_UNLOCKING:
             # Waiting for server approval to unlock (bike removal)
             if not awaiting_auth and last_auth_result:
-                if last_auth_result.get('status') == 'ok':
+                if last_auth_result.get('reply') == 'accept':
                     # Grant access: unlock so the user can remove the bike
                     set_unlocked_outputs()
                     set_state(STATE_UNLOCKING_RELAY_ON)
@@ -672,8 +670,8 @@ try:
 
         elif state == STATE_UNLOCKING_RELAY_ON:
             # Relay ON; wait for the wheel to move far enough (bike removed)
-            absent, dist = object_absent()
-            if absent:
+            present, dist = object_present()
+            if not present:
                 # Bike seems removed; now require user to re-scan to confirm re-lock
                 set_state(STATE_UNLOCKING_WAIT_RELOCK)
             elif (now() - state_entered_at) > UNLOCK_FLOW_TIMEOUT:
@@ -697,7 +695,9 @@ try:
                     'user_id': pending_auth_user,
                     'timestamp': now()
                 })
+                # Clear user and bike info
                 current_bike_id = None
+                pending_auth_user = None
                 set_state(STATE_IDLE)
             elif (now() - state_entered_at) > RELOCK_CONFIRM_TIMEOUT:
                 # User walked away without confirming; warn, then lock for safety
