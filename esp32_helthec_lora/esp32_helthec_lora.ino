@@ -5,6 +5,11 @@
 
 // Each bike of the fleet is associated with an ID
 #define BIKE_ID 1
+#define DEBUG_SENSORS 1
+// ========================== Debug (precompiler-controlled) ===================
+// Set to 1 to enable periodic compact sensor/state debug line; 0 to compile out
+#define DEBUG_SENSORS 1
+#define DEBUG_SENSORS_INTERVAL_MS 5000UL  // print every 5 seconds
 
 // ========================== LoRa Configuration ==========================
 #define RF_FREQUENCY 868100000   // LoRa frequency in Hz (EU868 band)
@@ -48,16 +53,7 @@ static unsigned long lastGpsLineTime = 0;  // Last time had a GPS full line
 // If no GPS data received for more than 5 seconds, print debug message every 5
 static unsigned long lastDebugTime = 0; // Last time debug message was printed
 
-// ========================== Lighting & Buzzer ==========================
-#define LIGHTPIN 3              // Pin controlling the bike light
-#define RELAYPIN 2              // Pin controlling relay (bike power lock)
-#define BUZZERPIN 6             // Pin for buzzer
-#define LIGHT_THRESHOLD 512     // Threshold for light level
-#define MOVING_AVG_WINDOW 10    // Window size for moving average
 
-int lightReadings[MOVING_AVG_WINDOW]; // Array to store light readings
-int currentIndex = 0;                // Current index in the array
-int sumReadings = 0;                 // Sum of readings for moving average
 
 // ========================== Encryption Key ============================
 const unsigned char aes_key[16] = {
@@ -72,17 +68,110 @@ const unsigned char aes_key[16] = {
 bool identified = false;  // true = UNLOCKED, false = LOCKED
 
 // ========================== Forward Declarations =======================
+// Formater
 void putGpsData2txpacket();
-void aes_encrypt(const uint8_t *input, size_t length, uint8_t *output, size_t *out_len);
-void aes_decrypt(const uint8_t *input, size_t length, uint8_t *output, size_t *out_len);
+// LoRa
 void sendLoRaData(void (*formatPacket)());
 void receivedLoRaData(uint16_t packetSize);
-
 // Radio event handlers ensure we return to continuous RX quickly
 void OnTxDone(void);
 void OnTxTimeout(void);
 void OnRxDone(uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr);
 void OnRxTimeout(void);
+// AES Helper
+void aes_encrypt(const uint8_t *input, size_t length, uint8_t *output, size_t *out_len);
+void aes_decrypt(const uint8_t *input, size_t length, uint8_t *output, size_t *out_len);
+// =============================================================================
+// Other third party functions
+// =============================================================================
+  // ========================== Lighting  ==========================
+  #define LIGHTPIN 3              // Pin Light Sensor
+  #define RELAYPIN 2              // Pin controlling relay (bike power lock)
+  #define LIGHT_THRESHOLD 512     // Threshold for light level
+  #define MOVING_AVG_WINDOW 10    // Window size for moving average
+
+  int lightReadings[MOVING_AVG_WINDOW]; // Array to store light readings
+  int currentIndex = 0;                // Current index in the array
+  int sumReadings = 0;                 // Sum of readings for moving average
+  //Auto Light System
+  void light_ifDark(); //Note the bike light is managed by the relay
+
+// ============================= Anti-Stole System ===================
+  // --- Tunables ---
+  #define BUZZERPIN 5             // Pin for buzzer
+  #define MOTION_SPEED_KMPH        2.0f            // above this = moving
+  #define MOTION_MAX_AGE_MS        ((uint32_t)1500) // GPS speed must be newer than this
+  #define MOTION_HOLD_MS           ((uint32_t)2000) // tolerate brief GPS dropouts
+  #define MOTION_REQUIRED_MS       ((uint32_t)(3UL * 60UL * 1000UL)) // require 3 min of motion
+  #define MOTION_PAUSE_GRACE_MS    ((uint32_t)10000) // allow brief stops without reset (10 s)
+
+  // --- State ---
+  static uint32_t s_lastAboveMs     = 0;   // last time speed was above threshold
+  static bool     s_moving          = false;
+  static uint32_t s_motionStartMs   = 0;   // when sustained-motion window started
+  static bool     s_buzzerActive    = false;
+  
+  static inline bool isMovingNow();
+  void bip_ifStolen();
+
+#if DEBUG_SENSORS
+static unsigned long s_lastSensorsDebugMs = 0;
+static void debug_printSensors();
+// Return the latest moving-average light level (integer)
+static inline int currentLightLevel() {
+  return (MOVING_AVG_WINDOW > 0) ? (sumReadings / MOVING_AVG_WINDOW) : 0;
+}
+static void debug_printSensors() {
+  // Gather states with zero side-effects
+  const bool lock_unlocked = identified;
+  const int  lightLevel    = currentLightLevel();
+  const bool relayOn       = digitalRead(RELAYPIN) == HIGH;
+  const bool buzzerOn      = digitalRead(BUZZERPIN) == HIGH;
+
+  // GPS state
+  const bool gpsValid      = gps.location.isValid();
+  const uint32_t gpsAge    = gps.location.age(); // ms since last fix
+  const double lat         = gpsValid ? gps.location.lat() : 0.0;
+  const double lng         = gpsValid ? gps.location.lng() : 0.0;
+  const bool spdValid      = gps.speed.isValid();
+  const float spdKmph      = spdValid ? gps.speed.kmph() : 0.0f;
+  const uint32_t spdAge    = gps.speed.age(); // ms
+  const uint32_t sats      = gps.satellites.isValid() ? gps.satellites.value() : 0;
+
+  // Motion/anti-theft internals (read-only)
+  const bool moving        = s_moving;
+  const uint32_t nowMs     = millis();
+  const uint32_t sinceAbove= (uint32_t)(nowMs - s_lastAboveMs);
+  const uint32_t motionRun = (s_motionStartMs ? (uint32_t)(nowMs - s_motionStartMs) : 0);
+  const bool loraIdle      = lora_idle;
+
+  // Single compact line (CSV-like key=val)
+  Serial.print("DBG:");
+  Serial.print(" lock=");        Serial.print(lock_unlocked ? "UNLOCKED" : "LOCKED");
+  Serial.print(" light=");       Serial.print(lightLevel);
+  Serial.print(" thr=");         Serial.print(LIGHT_THRESHOLD);
+  Serial.print(" relay=");       Serial.print(relayOn ? 1 : 0);
+  Serial.print(" buzzer=");      Serial.print(buzzerOn ? 1 : 0);
+
+  Serial.print(" gpsFix=");      Serial.print(gpsValid ? 1 : 0);
+  Serial.print(" gpsAgeMs=");    Serial.print(gpsAge);
+  Serial.print(" lat=");         if (gpsValid) Serial.print(lat, 6); else Serial.print("N/A");
+  Serial.print(" lng=");         if (gpsValid) Serial.print(lng, 6); else Serial.print("N/A");
+  Serial.print(" spdOk=");       Serial.print(spdValid ? 1 : 0);
+  Serial.print(" spdKmph=");     Serial.print(spdKmph, 2);
+  Serial.print(" spdAgeMs=");    Serial.print(spdAge);
+  Serial.print(" sats=");        Serial.print(sats);
+
+  Serial.print(" moving=");      Serial.print(moving ? 1 : 0);
+  Serial.print(" sinceAboveMs=");Serial.print(sinceAbove);
+  Serial.print(" motionRunMs="); Serial.print(motionRun);
+
+  Serial.print(" loraIdle=");    Serial.print(loraIdle ? 1 : 0);
+
+  Serial.println();
+}
+#endif
+
 
 // ========================== Setup ======================================
 void setup() {
@@ -116,6 +205,11 @@ void setup() {
   // IO setup
   pinMode(RELAYPIN, OUTPUT);
   pinMode(BUZZERPIN, OUTPUT);
+  //Make sure these pin are off by default
+  digitalWrite(RELAYPIN, LOW);
+  digitalWrite(BUZZERPIN, LOW);
+
+
   pinMode(LIGHTPIN, INPUT);
   for (int i = 0; i < MOVING_AVG_WINDOW; i++) lightReadings[i] = 0;
 
@@ -126,7 +220,6 @@ void setup() {
 void loop() {
   // Process radio IRQs
   Radio.IrqProcess();
-
   // -------------------------- GPS handling  ----------------------------
   gpsDataReceived = false;
   if (millis() - lastGpsLineTime > GPS_CHECK_INTERVAL) {
@@ -155,46 +248,36 @@ void loop() {
       lastDebugTime = millis();
     }
   }
+  //Other utilities
+  if(identified)
+  {
+    light_ifDark();
+  }else
+  {
 
-// -------------------------- LoRa TX break for GPS --------------------
-// [ADDED RX-ALWAYS] TX only when idle; callbacks return to continuous RX.
-if (millis() - lastLoRaGpsTime > LoRa_GPS_Interval && lora_idle) {
-  sendLoRaData(putGpsData2txpacket);
-  lastLoRaGpsTime = millis();
-}
-
-  // -------------------------- Light/Relay/Buzzer logic -----------------
-  // This section is unchanged functionally; lock state now comes from aut packets.
-  // Moving average read
-  sumReadings -= lightReadings[currentIndex];
-  lightReadings[currentIndex] = analogRead(LIGHTPIN);
-  sumReadings += lightReadings[currentIndex];
-  currentIndex = (currentIndex + 1) % MOVING_AVG_WINDOW;
-  int lightLevel = sumReadings / MOVING_AVG_WINDOW;
-
-  if (identified) { // UNLOCKED
-    if (lightLevel < LIGHT_THRESHOLD) {
-      digitalWrite(RELAYPIN, HIGH);  // ON in low light
-    } else {
-      digitalWrite(RELAYPIN, LOW);   // OFF in bright light
+  }
+  // -------------------------- LoRa TX break for GPS --------------------
+  // TX only when idle; callbacks return to continuous RX.
+  if (millis() - lastLoRaGpsTime > LoRa_GPS_Interval && lora_idle) {
+    sendLoRaData(putGpsData2txpacket);
+    lastLoRaGpsTime = millis();
+  }
+    // Defensive: ensure we remain in RX when idle
+    if (lora_idle) {
+      Radio.Rx(0);
     }
-    digitalWrite(BUZZERPIN, LOW);
-  } else { // LOCKED
-    digitalWrite(RELAYPIN, LOW);     // No light when locked
-    // Keep buzzer quiet unless you want anti-tamper here; leaving OFF.
-    digitalWrite(BUZZERPIN, LOW);
-  }
-
-  // [ADDED RX-ALWAYS] Defensive: ensure we remain in RX when idle
-  if (lora_idle) {
-    Radio.Rx(0);
-  }
-
-  delay(20);
+    #if DEBUG_SENSORS
+      // Periodic consolidated debug line
+      if (millis() - s_lastSensorsDebugMs >= DEBUG_SENSORS_INTERVAL_MS) {
+        debug_printSensors();
+        s_lastSensorsDebugMs = millis();
+      }
+    #endif
+    delay(20);
 }
 
 // ========================== Radio callbacks ============================
-// [ADDED RX-ALWAYS] All callbacks return radio to continuous RX
+// All callbacks return radio to continuous RX
 void OnTxDone(void) {
   Serial.println("TX done");
   lora_idle = true;
@@ -250,7 +333,7 @@ void sendLoRaData(void (*formatPacket)()) {
   Serial.print(encryptedLength);
   Serial.println(")");
 
-  lora_idle = false;                 // [ADDED RX-ALWAYS] we briefly leave RX to TX
+  lora_idle = false;                 // We briefly leave RX to TX
   Radio.Send((uint8_t*)txpacket, encryptedLength);
   // Radio will be put back into Rx(0) in OnTxDone/OnTxTimeout
 }
@@ -462,5 +545,65 @@ bool aes_ecb_decrypt(
     *out_len = plain_len;
     mbedtls_aes_free(&aes);
     return true;
+}
+// === Activate bike light system if dark enough
+void light_ifDark() {
+  // -------------------------- Light/Relay/Buzzer logic -----------------
+  // Moving average read (non-blocking)
+  sumReadings -= lightReadings[currentIndex];
+  lightReadings[currentIndex] = analogRead(LIGHTPIN);
+  sumReadings += lightReadings[currentIndex];
+  currentIndex = (currentIndex + 1) % MOVING_AVG_WINDOW;
+
+  const int lightLevel = sumReadings / MOVING_AVG_WINDOW;
+
+  if (identified) { // UNLOCKED: light system active
+    digitalWrite(RELAYPIN, (lightLevel < LIGHT_THRESHOLD) ? HIGH : LOW);
+  } else {          // LOCKED: force OFF
+    digitalWrite(RELAYPIN, LOW);
+  }
+}
+
+// === Anti-Stole Sytem ===
+static inline bool isMovingNow() {
+  if (gps.speed.isValid() && gps.speed.age() <= MOTION_MAX_AGE_MS) {
+    if (gps.speed.kmph() > MOTION_SPEED_KMPH) {
+      s_lastAboveMs = millis();
+      s_moving = true;
+    } else {
+      s_moving = false;
+    }
+  } else {
+    // If data is stale, keep "moving" briefly (rollover-safe)
+    s_moving = (uint32_t)(millis() - s_lastAboveMs) < MOTION_HOLD_MS;
+  }
+  return s_moving;
+}
+
+void bip_ifStolen() {
+  const uint32_t now = millis();
+  const bool moving = isMovingNow();
+
+  // Track sustained motion
+  if (moving) {
+    if (s_motionStartMs == 0) {
+      s_motionStartMs = now;  // start timing
+    }
+    // Activate once motion has lasted long enough
+    if ((uint32_t)(now - s_motionStartMs) >= MOTION_REQUIRED_MS) {
+      s_buzzerActive = true;
+    }
+  } else {
+    // Not moving: allow a short grace before resetting the timer/activation
+    const bool withinGrace = (uint32_t)(now - s_lastAboveMs) < MOTION_PAUSE_GRACE_MS;
+    if (!withinGrace) {
+      s_motionStartMs = 0;    // reset the sustained-motion timer
+      s_buzzerActive  = false; // deactivate after a real stop
+    }
+    // If withinGrace, keep timing/activation as-is
+  }
+
+  // Drive the buzzer
+  digitalWrite(BUZZERPIN, s_buzzerActive ? HIGH : LOW);
 }
 // ========================== End of Functions Definitions ===============
