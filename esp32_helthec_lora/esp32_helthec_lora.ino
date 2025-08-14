@@ -43,7 +43,8 @@ unsigned long lastLoRaLockStatusTime = 0;    // Last time lock status was sent
 #define BAUD 9600                // Baud rate for GPS communication
 #define RXPIN 33                 // GPS RX pin (data from GPS module)
 #define TXPIN 34                 // GPS TX pin (data to GPS module)
-#define GPS_CHECK_INTERVAL 5000  // Interval to check GPS data in ms
+// Important note the GPS CHECK INTERVAL Must be lower than the gps hz publish
+#define GPS_CHECK_INTERVAL 1000  // Interval to check GPS data in ms
 TinyGPSPlus gps;                // GPS object from TinyGPS++ library
 bool gpsDataAvailable = false;  // Flag to indicate GPS fix availability
 bool gpsDataReceived = false;   // Flag to indicate if GPS data was received
@@ -64,9 +65,12 @@ const unsigned char aes_key[16] = {
 };
 
 // ========================== Lock/Authorization State ===================
-
-bool identified = true;  // true = UNLOCKED, false = LOCKED
-
+#if DEBUG_SENSORS
+bool identified = false; //Launch the lock mode
+#endif
+#if !DEBUG_SENSORS
+bool identified = true; // Normal mode unlocked when freed
+#endif
 // ========================== Forward Declarations =======================
 // Formater
 void putGpsData2txpacket();
@@ -100,10 +104,15 @@ void aes_decrypt(const uint8_t *input, size_t length, uint8_t *output, size_t *o
   // --- Tunables ---
   #define BUZZERPIN 5             // Pin for buzzer
   #define MOTION_SPEED_KMPH        2.0f            // above this = moving
-  #define MOTION_MAX_AGE_MS        ((uint32_t)1500) // GPS speed must be newer than this
+  #define MOTION_MAX_AGE_MS        ((uint32_t)6000) // GPS speed must be newer than this
   #define MOTION_HOLD_MS           ((uint32_t)2000) // tolerate brief GPS dropouts
   #define MOTION_REQUIRED_MS       ((uint32_t)(3UL * 60UL * 1000UL)) // require 3 min of motion
   #define MOTION_PAUSE_GRACE_MS    ((uint32_t)10000) // allow brief stops without reset (10 s)
+  #define MOTION_SMOOTH_WINDOW 4
+  #define MOTION_SPEED_KMPH        3.0f   // existing threshold
+  #define MOTION_CONSECUTIVE_REQ   3     // require 3 consecutive valid samples
+  static int s_above_count = 0;
+
 
   // --- State ---
   static uint32_t s_lastAboveMs     = 0;   // last time speed was above threshold
@@ -273,7 +282,6 @@ void loop() {
         s_lastSensorsDebugMs = millis();
       }
     #endif
-    delay(20);
 }
 
 // ========================== Radio callbacks ============================
@@ -566,19 +574,31 @@ void light_ifDark() {
 
 // === Anti-Stole Sytem ===
 static inline bool isMovingNow() {
+  // Only consider fresh valid speed samples
   if (gps.speed.isValid() && gps.speed.age() <= MOTION_MAX_AGE_MS) {
-    if (gps.speed.kmph() > MOTION_SPEED_KMPH) {
-      s_lastAboveMs = millis();
-      s_moving = true;
+    float sp = gps.speed.kmph();
+    if (sp > MOTION_SPEED_KMPH) {
+      s_above_count++;
+      if (s_above_count >= MOTION_CONSECUTIVE_REQ) {
+        s_lastAboveMs = millis();
+        s_moving = true;
+      }
     } else {
-      s_moving = false;
+      s_above_count = 0; // reset on a below-threshold valid reading
+      // optionally implement hysteresis: if speed is moderately high, keep s_moving true
+      if (s_moving && sp > (MOTION_SPEED_KMPH * 0.5f)) {
+        // keep moving until a lower threshold reached
+      } else {
+        s_moving = false;
+      }
     }
   } else {
-    // If data is stale, keep "moving" briefly (rollover-safe)
+    // stale: keep moving for a short hold window
     s_moving = (uint32_t)(millis() - s_lastAboveMs) < MOTION_HOLD_MS;
   }
   return s_moving;
 }
+
 
 void bip_ifStolen() {
   const uint32_t now = millis();
