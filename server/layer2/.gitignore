@@ -205,14 +205,15 @@ __marimo__/
 # Ignore certs
 certs/
 management/certs/
-smartpedals/app/certs/
-smartpedals/mongodb/certs/
-smartpedals/mqtt/certs/
+smartPedals/app/certs/
+smartPedals/mongodb/certs/
+smartPedals/mqtt/certs/
 
 # Ignore files
 *.old*
 *.bak*
 *.env*
+*.py~*
 
 # Ignore directories
 management/caddy/data
