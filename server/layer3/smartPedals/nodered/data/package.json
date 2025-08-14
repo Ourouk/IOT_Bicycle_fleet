@@ -1,0 +1,12 @@
+{
+    "name": "node-red-project",
+    "description": "A Node-RED Project",
+    "version": "0.0.1",
+    "private": true,
+    "dependencies": {
+        "@flowfuse/node-red-dashboard": "~1.26.0",
+        "node-red-contrib-web-worldmap": "~5.5.1",
+        "node-red-dashboard": "~3.6.6",
+        "node-red-node-ui-table": "~0.4.5"
+    }
+}

@@ -1,0 +1,5 @@
+services:
+  caddy:
+    extra_hosts:
+      - "isil.local:192.168.196.207"
+      - "hepl.local:192.168.196.74"

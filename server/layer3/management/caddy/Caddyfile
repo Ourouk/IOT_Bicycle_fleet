@@ -1,0 +1,47 @@
+https://isil.local {
+    tls /certs/enterprise-caddy.crt /certs/enterprise-caddy.key.unlocked {
+        client_auth off
+    }
+
+    # Redirect without trailing slash
+    redir /cockpit /cockpit/
+    redir /portainer /portainer/
+    redir /smartpedals /smartpedals/
+    redir /nodered /nodered/
+    # Redirect automatically if empty
+    redir / /cockpit/
+
+    # Reverse proxy for Cockpit at /cockpit/*
+    # Cockpit: needs the /cockpit prefix preserved
+    handle /cockpit/* {
+        #reverse_proxy https://192.168.56.4:9090 {
+        reverse_proxy https://isil.local:9090 {
+            transport http {
+                tls_insecure_skip_verify
+            }
+        }
+    }
+
+    # Reverse proxy for Portainer at /portainer/*
+    # Portainer: needs the prefix removed
+    handle_path /portainer/* {
+        reverse_proxy https://portainer:9443 {
+            transport http {
+                tls_insecure_skip_verify
+            }
+        }
+    }
+
+    # Reverse proxy to test the SmartPedals app at /smartpedals/*
+    handle /smartpedals/* {
+        reverse_proxy http://smartpedals_mqtt_sender:5000
+    }
+
+    # Reverse proxy for nodered at /nodered/*
+    handle /nodered/* {
+        reverse_proxy https://nodered_dashboard:1880 {
+	    transport http {
+		tls_insecure_skip_verify
+	    }
+    }
+}

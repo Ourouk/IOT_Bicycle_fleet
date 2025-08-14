@@ -1,0 +1,7 @@
+services:
+  flask_mqtt_sender:
+    extra_hosts:
+      - "hepl.local:192.168.196.74"
+  nodered:
+    extra_hosts:
+      - "hepl.local:192.168.196.74"
