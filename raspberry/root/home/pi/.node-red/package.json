@@ -1,0 +1,11 @@
+{
+    "name": "node-red-project",
+    "description": "A Node-RED Project",
+    "version": "0.0.1",
+    "private": true,
+    "dependencies": {
+        "node-red-contrib-camerapi": "0.0.39",
+        "node-red-contrib-crypto-blue": "0.0.5",
+        "node-red-contrib-iot4h-grovepi": "~1.1.0"
+    }
+}
