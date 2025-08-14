@@ -217,7 +217,6 @@ smartpedals/mqtt/certs/
 # Ignore directories
 management/caddy/data
 management/portainer/data
-smartpedals/mongodb/data
-smartpedals/mongodb/data_bak
-smartpedals/mqtt/data
-smartpedals/mqtt/log
+smartPedals/mongodb/data
+smartPedals/mqtt/data
+smartPedals/mqtt/log

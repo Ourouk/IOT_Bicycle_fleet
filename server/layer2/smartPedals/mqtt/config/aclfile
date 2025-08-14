@@ -1,0 +1,29 @@
+# Topic that everyone can read
+topic read sensors/temp_hum
+
+# smartuser : read/write everywhere
+user smartadmin
+topic #
+
+# smartadmin : read/write hepl
+user smartuser
+topic hepl/#
+
+# smartbike : read/write hepl/bikes
+user smartbike
+topic read hepl/bikes/#
+topic write hepl/bikes/#
+
+# smartstation : read/write hepl/stations
+user smartstation
+topic read hepl/stations/#
+topic write hepl/stations/#
+
+# Pattern: each client can write on it's own topic, e.i.: client-id=station-001 can write on topic hepl/clientid/stats
+pattern write hepl/%c/+
+
+# Pattern: each user can write on it's own user space, e.i.: user=smartuser can write on topic users/smartuser/data
+pattern write users/%u/+
+
+# Pattern: allow reading of user datas
+pattern read users/+/data
