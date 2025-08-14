@@ -1,0 +1,2635 @@
+[
+    {
+        "id": "f8bc54da016b7352",
+        "type": "tab",
+        "label": "API REST",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "96c3cda21b90f5d3",
+        "type": "tab",
+        "label": "WORLDMAP",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "1da9cfba853e0d9a",
+        "type": "subflow",
+        "name": "Subflow 1",
+        "info": "",
+        "category": "",
+        "in": [],
+        "out": [],
+        "env": [],
+        "meta": {},
+        "color": "#DDAA99"
+    },
+    {
+        "id": "55056c7c8fe0e0fa",
+        "type": "group",
+        "z": "f8bc54da016b7352",
+        "name": "Users",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "c3546057809c20d0",
+            "6c99690d313674a5",
+            "1dfedaf3094ffe0e",
+            "f90313810e3087ae",
+            "c029c211e04a2394",
+            "c801ed0796b9531f",
+            "75dcfd903f845752",
+            "18cf4d5268fb78fe",
+            "39a785b620c5e9dd",
+            "cee420648a2fae74",
+            "24fa24e048ba197b",
+            "f411fd8a3ba8e179",
+            "60f21c88ccc35115",
+            "7e2f479b23078632",
+            "0c2749b569b0413c",
+            "152c12bc16ecac1b",
+            "156e55908398abf2"
+        ],
+        "x": 14,
+        "y": 19,
+        "w": 1518,
+        "h": 368
+    },
+    {
+        "id": "b257784fc310cf77",
+        "type": "group",
+        "z": "f8bc54da016b7352",
+        "name": "Bikes",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "418ad1727e5311ca",
+            "eb3fad66b17b0eec",
+            "4ca193ce64f4b720",
+            "36fca37eb00d98ac",
+            "5c21914314f46c6f",
+            "cdac9782a301f6d5",
+            "bb32ba065cd20e51",
+            "00b9aeb9fbc23300",
+            "cf4dbb5fc8baa1c6",
+            "331497235d83f3b2",
+            "1251abc21f160cd7",
+            "c01fe338a67d8dfb",
+            "068a87f993742a2a",
+            "1356cff6e7d41cdb",
+            "ce94fc9745a6fc25",
+            "ce7103cf8fb8ffd3"
+        ],
+        "x": 14,
+        "y": 419,
+        "w": 1392,
+        "h": 348
+    },
+    {
+        "id": "9b84c8604e72fb7c",
+        "type": "group",
+        "z": "f8bc54da016b7352",
+        "name": "Stations",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "08927acd4ef9680b",
+            "5f58f34948838bea",
+            "a79322979a25b330",
+            "af4124b1986e8913",
+            "a34d14723ef72959",
+            "9a1f66e64687c3e3",
+            "59126513093bed39",
+            "45e3a03616de5f07",
+            "4c8a01e8050a72c9",
+            "698e40dc97376c31",
+            "6d57a246890b8592",
+            "159d9e6703c7229c"
+        ],
+        "x": 14,
+        "y": 799,
+        "w": 1392,
+        "h": 222
+    },
+    {
+        "id": "830b084e8a80b671",
+        "type": "group",
+        "z": "f8bc54da016b7352",
+        "name": "Locations",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "84ecd95c05af92d6",
+            "736c65572a9a15fe",
+            "aa6f70d8dde6d49a",
+            "c15d5aff5b41d478",
+            "060533021c7542a1"
+        ],
+        "x": 14,
+        "y": 1059,
+        "w": 692,
+        "h": 142
+    },
+    {
+        "id": "d518b4f2f81a3194",
+        "type": "group",
+        "z": "f8bc54da016b7352",
+        "name": "Management",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "ui_ctrl_sink",
+            "49971e87a61607b8",
+            "99bad1f7329d0580",
+            "e706f2e850459f30",
+            "556ad038455a700f",
+            "d9b5d74366de92a0"
+        ],
+        "x": 14,
+        "y": 1239,
+        "w": 752,
+        "h": 202
+    },
+    {
+        "id": "adf31f5d4620e8e5",
+        "type": "group",
+        "z": "96c3cda21b90f5d3",
+        "name": "Locations",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "5101c51eb8c0b6a4",
+            "5d029d15f4cf0d4b",
+            "3d769ece20c467fa",
+            "a74bae290d95723e"
+        ],
+        "x": 14,
+        "y": 19,
+        "w": 692,
+        "h": 142
+    },
+    {
+        "id": "d80adb4003cfe74b",
+        "type": "group",
+        "z": "f8bc54da016b7352",
+        "name": "Flask",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "d32a796efc663434"
+        ],
+        "x": 814,
+        "y": 1239,
+        "w": 212,
+        "h": 82
+    },
+    {
+        "id": "156e55908398abf2",
+        "type": "group",
+        "z": "f8bc54da016b7352",
+        "g": "55056c7c8fe0e0fa",
+        "name": "Mailtrap",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "be8a254a80eacc5f",
+            "3ee03c0578b85bb9",
+            "ed1da2a50a22c4b4",
+            "b9b2ce468ff6f3a2",
+            "467e14ec67bcd335",
+            "94360ae29ca327ba"
+        ],
+        "x": 394,
+        "y": 239,
+        "w": 1112,
+        "h": 122
+    },
+    {
+        "id": "ce7103cf8fb8ffd3",
+        "type": "group",
+        "z": "f8bc54da016b7352",
+        "g": "b257784fc310cf77",
+        "name": "MQTT 8884",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "a478b31126c3351f",
+            "1b2f13aa43ec6c46",
+            "bb1a69b3b8d0ad89",
+            "554a2a8d96016272"
+        ],
+        "x": 394,
+        "y": 619,
+        "w": 432,
+        "h": 122
+    },
+    {
+        "id": "5a1477eb81ac255d",
+        "type": "ui_base",
+        "theme": {
+            "name": "theme-light",
+            "lightTheme": {
+                "default": "#0094CE",
+                "baseColor": "#57e389",
+                "baseFont": "-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen-Sans,Ubuntu,Cantarell,Helvetica Neue,sans-serif",
+                "edited": true,
+                "reset": false
+            },
+            "darkTheme": {
+                "default": "#097479",
+                "baseColor": "#097479",
+                "baseFont": "-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen-Sans,Ubuntu,Cantarell,Helvetica Neue,sans-serif",
+                "edited": false
+            },
+            "customTheme": {
+                "name": "Untitled Theme 1",
+                "default": "#4B7930",
+                "baseColor": "#4B7930",
+                "baseFont": "-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen-Sans,Ubuntu,Cantarell,Helvetica Neue,sans-serif"
+            },
+            "themeState": {
+                "base-color": {
+                    "default": "#0094CE",
+                    "value": "#57e389",
+                    "edited": true
+                },
+                "page-titlebar-backgroundColor": {
+                    "value": "#57e389",
+                    "edited": false
+                },
+                "page-backgroundColor": {
+                    "value": "#fafafa",
+                    "edited": false
+                },
+                "page-sidebar-backgroundColor": {
+                    "value": "#ffffff",
+                    "edited": false
+                },
+                "group-textColor": {
+                    "value": "#99eeb7",
+                    "edited": false
+                },
+                "group-borderColor": {
+                    "value": "#ffffff",
+                    "edited": false
+                },
+                "group-backgroundColor": {
+                    "value": "#ffffff",
+                    "edited": false
+                },
+                "widget-textColor": {
+                    "value": "#111111",
+                    "edited": false
+                },
+                "widget-backgroundColor": {
+                    "value": "#57e389",
+                    "edited": false
+                },
+                "widget-borderColor": {
+                    "value": "#ffffff",
+                    "edited": false
+                },
+                "base-font": {
+                    "value": "-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen-Sans,Ubuntu,Cantarell,Helvetica Neue,sans-serif"
+                }
+            },
+            "angularTheme": {
+                "primary": "indigo",
+                "accents": "blue",
+                "warn": "red",
+                "background": "grey",
+                "palette": "light"
+            }
+        },
+        "site": {
+            "name": "Node-RED Dashboard",
+            "hideToolbar": "false",
+            "allowSwipe": "false",
+            "lockMenu": "false",
+            "allowTempTheme": "true",
+            "dateFormat": "DD/MM/YYYY",
+            "sizes": {
+                "sx": 48,
+                "sy": 48,
+                "gx": 6,
+                "gy": 6,
+                "cx": 6,
+                "cy": 6,
+                "px": 0,
+                "py": 0
+            }
+        }
+    },
+    {
+        "id": "859378531cff719c",
+        "type": "ui_group",
+        "name": "Racks",
+        "tab": "8c9a534e9cd32eec",
+        "order": 2,
+        "disp": true,
+        "width": "12",
+        "collapse": true,
+        "className": ""
+    },
+    {
+        "id": "0775276a207f2728",
+        "type": "ui_group",
+        "name": "Bikes",
+        "tab": "8c9a534e9cd32eec",
+        "order": 3,
+        "disp": true,
+        "width": "12",
+        "collapse": true,
+        "className": ""
+    },
+    {
+        "id": "d5fc11106263432a",
+        "type": "ui_group",
+        "name": "Users",
+        "tab": "8c9a534e9cd32eec",
+        "order": 4,
+        "disp": true,
+        "width": "12",
+        "collapse": true,
+        "className": ""
+    },
+    {
+        "id": "295d5c9fedf5a340",
+        "type": "ui_group",
+        "name": "Locations",
+        "tab": "8c9a534e9cd32eec",
+        "order": 5,
+        "disp": true,
+        "width": "12",
+        "collapse": true,
+        "className": ""
+    },
+    {
+        "id": "b652d6b0464b09a5",
+        "type": "ui_group",
+        "name": "Management",
+        "tab": "8c9a534e9cd32eec",
+        "order": 1,
+        "disp": true,
+        "width": 6,
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "a79b94d81535af80",
+        "type": "tls-config",
+        "name": "",
+        "cert": "/certs/testmosquitto/client.crt",
+        "key": "/certs/testmosquitto/client.key",
+        "ca": "/certs/testmosquitto/mosquitto.org.crt",
+        "certname": "",
+        "keyname": "",
+        "caname": "",
+        "servername": "",
+        "verifyservercert": true,
+        "alpnprotocol": ""
+    },
+    {
+        "id": "8a1ea2c3f4d65411",
+        "type": "mqtt-broker",
+        "name": "",
+        "broker": "test.mosquitto.org",
+        "port": "8884",
+        "tls": "a79b94d81535af80",
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": true,
+        "protocolVersion": 4,
+        "keepalive": 60,
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "641b5e8937934ab6",
+        "type": "ui_group",
+        "name": "Worldmap",
+        "tab": "ec779c8f40f3048d",
+        "order": 1,
+        "disp": true,
+        "width": "24",
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "f25b40dd118d3511",
+        "type": "ui-base",
+        "name": "My Dashboard",
+        "path": "/dashboard",
+        "appIcon": "",
+        "includeClientData": true,
+        "acceptsClientConfig": [
+            "ui-notification",
+            "ui-control"
+        ],
+        "showPathInSidebar": false,
+        "headerContent": "page",
+        "navigationStyle": "default",
+        "titleBarStyle": "default",
+        "showReconnectNotification": true,
+        "notificationDisplayTime": 1,
+        "showDisconnectNotification": true,
+        "allowInstall": true
+    },
+    {
+        "id": "4e29b34f0cbe2f42",
+        "type": "ui-theme",
+        "name": "Default Theme",
+        "colors": {
+            "surface": "#ffffff",
+            "primary": "#0094CE",
+            "bgPage": "#eeeeee",
+            "groupBg": "#ffffff",
+            "groupOutline": "#cccccc"
+        },
+        "sizes": {
+            "density": "default",
+            "pagePadding": "12px",
+            "groupGap": "12px",
+            "groupBorderRadius": "4px",
+            "widgetGap": "12px"
+        }
+    },
+    {
+        "id": "ui_theme_1",
+        "type": "ui-theme",
+        "name": "Default Theme",
+        "colors": {
+            "surface": "#ffffff",
+            "primary": "#0094ce",
+            "bgPage": "#eeeeee",
+            "groupBg": "#ffffff",
+            "groupOutline": "#cccccc"
+        }
+    },
+    {
+        "id": "53e823d79dde1009",
+        "type": "ui_group",
+        "name": "Flask",
+        "tab": "8c9a534e9cd32eec",
+        "order": 6,
+        "disp": true,
+        "width": "12",
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "8c9a534e9cd32eec",
+        "type": "ui_tab",
+        "name": "MongoDB",
+        "icon": "dashboard",
+        "disabled": false,
+        "hidden": false
+    },
+    {
+        "id": "ec779c8f40f3048d",
+        "type": "ui_tab",
+        "name": "WorldMap",
+        "icon": "dashboard",
+        "disabled": false,
+        "hidden": false
+    },
+    {
+        "id": "ui_page_mongodb",
+        "type": "ui-page",
+        "name": "MongoDB",
+        "ui": "f25b40dd118d3511",
+        "path": "/",
+        "layout": "grid",
+        "theme": "ui_theme_1",
+        "breakpoints": [
+            {
+                "name": "Default",
+                "px": 0,
+                "cols": 3
+            },
+            {
+                "name": "Tablet",
+                "px": 576,
+                "cols": 6
+            },
+            {
+                "name": "Small Desktop",
+                "px": 768,
+                "cols": 9
+            },
+            {
+                "name": "Desktop",
+                "px": 1024,
+                "cols": 12
+            }
+        ],
+        "order": 1,
+        "visible": true,
+        "disabled": false
+    },
+    {
+        "id": "bfc677fe4389aa93",
+        "type": "ui-page",
+        "name": "Page 1",
+        "ui": "f25b40dd118d3511",
+        "path": "/page1",
+        "icon": "home",
+        "layout": "grid",
+        "theme": "4e29b34f0cbe2f42",
+        "breakpoints": [
+            {
+                "name": "Default",
+                "px": 0,
+                "cols": 3
+            },
+            {
+                "name": "Tablet",
+                "px": 576,
+                "cols": 6
+            },
+            {
+                "name": "Small Desktop",
+                "px": 768,
+                "cols": 9
+            },
+            {
+                "name": "Desktop",
+                "px": 1024,
+                "cols": 12
+            }
+        ],
+        "order": 2,
+        "className": "",
+        "visible": true,
+        "disabled": false
+    },
+    {
+        "id": "5e4af04f2a24ca17",
+        "type": "ui-group",
+        "name": "Group 1",
+        "page": "bfc677fe4389aa93",
+        "width": 6,
+        "height": 1,
+        "order": 1,
+        "showTitle": true,
+        "className": "",
+        "visible": true,
+        "disabled": false,
+        "groupType": "default"
+    },
+    {
+        "id": "ui_group_users",
+        "type": "ui-group",
+        "name": "Users",
+        "page": "ui_page_mongodb",
+        "order": 1,
+        "visible": true,
+        "disabled": false
+    },
+    {
+        "id": "c3546057809c20d0",
+        "type": "inject",
+        "z": "f8bc54da016b7352",
+        "g": "55056c7c8fe0e0fa",
+        "name": "Refresh User List",
+        "props": [],
+        "repeat": "60",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.5,
+        "topic": "",
+        "x": 150,
+        "y": 60,
+        "wires": [
+            [
+                "6c99690d313674a5"
+            ]
+        ]
+    },
+    {
+        "id": "6c99690d313674a5",
+        "type": "http request",
+        "z": "f8bc54da016b7352",
+        "g": "55056c7c8fe0e0fa",
+        "name": "GET Users",
+        "method": "GET",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "https://hepl.local/smartpedals/api/users",
+        "tls": "",
+        "insecureHTTPParser": false,
+        "x": 360,
+        "y": 60,
+        "wires": [
+            [
+                "1dfedaf3094ffe0e",
+                "f90313810e3087ae"
+            ]
+        ]
+    },
+    {
+        "id": "1dfedaf3094ffe0e",
+        "type": "ui_table",
+        "z": "f8bc54da016b7352",
+        "g": "55056c7c8fe0e0fa",
+        "group": "d5fc11106263432a",
+        "name": "User Table",
+        "order": 4,
+        "width": "12",
+        "height": "4",
+        "columns": [
+            {
+                "field": "rfid",
+                "title": "RFID",
+                "width": "",
+                "align": "left",
+                "formatter": "plaintext",
+                "formatterParams": {
+                    "target": "_blank"
+                }
+            },
+            {
+                "field": "history",
+                "title": "History",
+                "width": "",
+                "align": "left",
+                "formatter": "plaintext",
+                "formatterParams": {
+                    "target": "_blank"
+                }
+            },
+            {
+                "field": "firstName",
+                "title": "First Name",
+                "width": "",
+                "align": "left",
+                "formatter": "plaintext",
+                "formatterParams": {
+                    "target": "_blank"
+                }
+            },
+            {
+                "field": "lastName",
+                "title": "Last Name",
+                "width": "",
+                "align": "left",
+                "formatter": "plaintext",
+                "formatterParams": {
+                    "target": "_blank"
+                }
+            },
+            {
+                "field": "email",
+                "title": "Email",
+                "width": "",
+                "align": "left",
+                "formatter": "plaintext",
+                "formatterParams": {
+                    "target": "_blank"
+                }
+            },
+            {
+                "field": "phone",
+                "title": "Phone",
+                "width": "",
+                "align": "left",
+                "formatter": "plaintext",
+                "formatterParams": {
+                    "target": "_blank"
+                }
+            },
+            {
+                "field": "id",
+                "title": "MongoID",
+                "width": "",
+                "align": "left",
+                "formatter": "plaintext",
+                "formatterParams": {
+                    "target": "_blank"
+                }
+            }
+        ],
+        "outputs": 1,
+        "cts": true,
+        "x": 590,
+        "y": 60,
+        "wires": [
+            [
+                "f411fd8a3ba8e179",
+                "60f21c88ccc35115"
+            ]
+        ]
+    },
+    {
+        "id": "f90313810e3087ae",
+        "type": "debug",
+        "z": "f8bc54da016b7352",
+        "g": "55056c7c8fe0e0fa",
+        "name": "List users",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 580,
+        "y": 120,
+        "wires": []
+    },
+    {
+        "id": "418ad1727e5311ca",
+        "type": "inject",
+        "z": "f8bc54da016b7352",
+        "g": "b257784fc310cf77",
+        "name": "Refresh Bike List",
+        "props": [],
+        "repeat": "60",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.5,
+        "topic": "",
+        "x": 150,
+        "y": 460,
+        "wires": [
+            [
+                "eb3fad66b17b0eec"
+            ]
+        ]
+    },
+    {
+        "id": "eb3fad66b17b0eec",
+        "type": "http request",
+        "z": "f8bc54da016b7352",
+        "g": "b257784fc310cf77",
+        "name": "GET Bikes",
+        "method": "GET",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "https://hepl.local/smartpedals/api/bikes",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 360,
+        "y": 460,
+        "wires": [
+            [
+                "4ca193ce64f4b720",
+                "36fca37eb00d98ac",
+                "1b2f13aa43ec6c46"
+            ]
+        ]
+    },
+    {
+        "id": "4ca193ce64f4b720",
+        "type": "ui_table",
+        "z": "f8bc54da016b7352",
+        "g": "b257784fc310cf77",
+        "group": "0775276a207f2728",
+        "name": "Bikes Table",
+        "order": 4,
+        "width": "12",
+        "height": "4",
+        "columns": [
+            {
+                "field": "bikeId",
+                "title": "Bike Id",
+                "width": "",
+                "align": "left",
+                "formatter": "plaintext",
+                "formatterParams": {
+                    "target": "_blank"
+                }
+            },
+            {
+                "field": "status",
+                "title": "Status",
+                "width": "",
+                "align": "left",
+                "formatter": "plaintext",
+                "formatterParams": {
+                    "target": "_blank"
+                }
+            },
+            {
+                "field": "currentUser",
+                "title": "Current User",
+                "width": "",
+                "align": "left",
+                "formatter": "plaintext",
+                "formatterParams": {
+                    "target": "_blank"
+                }
+            },
+            {
+                "field": "currentRack",
+                "title": "Current Rack",
+                "width": "",
+                "align": "left",
+                "formatter": "plaintext",
+                "formatterParams": {
+                    "target": "_blank"
+                }
+            },
+            {
+                "field": "history",
+                "title": "History",
+                "width": "",
+                "align": "left",
+                "formatter": "plaintext",
+                "formatterParams": {
+                    "target": "_blank"
+                }
+            },
+            {
+                "field": "id",
+                "title": "MongoID",
+                "width": "",
+                "align": "left",
+                "formatter": "plaintext",
+                "formatterParams": {
+                    "target": "_blank"
+                }
+            }
+        ],
+        "outputs": 1,
+        "cts": true,
+        "x": 590,
+        "y": 460,
+        "wires": [
+            [
+                "00b9aeb9fbc23300",
+                "cf4dbb5fc8baa1c6"
+            ]
+        ]
+    },
+    {
+        "id": "36fca37eb00d98ac",
+        "type": "debug",
+        "z": "f8bc54da016b7352",
+        "g": "b257784fc310cf77",
+        "name": "List bikes",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 580,
+        "y": 520,
+        "wires": []
+    },
+    {
+        "id": "08927acd4ef9680b",
+        "type": "inject",
+        "z": "f8bc54da016b7352",
+        "g": "9b84c8604e72fb7c",
+        "name": "Refresh Rack List",
+        "props": [],
+        "repeat": "60",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.5,
+        "topic": "",
+        "x": 150,
+        "y": 840,
+        "wires": [
+            [
+                "5f58f34948838bea"
+            ]
+        ]
+    },
+    {
+        "id": "5f58f34948838bea",
+        "type": "http request",
+        "z": "f8bc54da016b7352",
+        "g": "9b84c8604e72fb7c",
+        "name": "GET Racks",
+        "method": "GET",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "https://hepl.local/smartpedals/api/racks",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 360,
+        "y": 840,
+        "wires": [
+            [
+                "a79322979a25b330",
+                "af4124b1986e8913"
+            ]
+        ]
+    },
+    {
+        "id": "a79322979a25b330",
+        "type": "ui_table",
+        "z": "f8bc54da016b7352",
+        "g": "9b84c8604e72fb7c",
+        "group": "859378531cff719c",
+        "name": "Rack Table",
+        "order": 4,
+        "width": "12",
+        "height": "4",
+        "columns": [
+            {
+                "field": "rackId",
+                "title": "Rack Id",
+                "width": "",
+                "align": "left",
+                "formatter": "plaintext",
+                "formatterParams": {
+                    "target": "_blank"
+                }
+            },
+            {
+                "field": "stationId",
+                "title": "Station Id",
+                "width": "",
+                "align": "left",
+                "formatter": "plaintext",
+                "formatterParams": {
+                    "target": "_blank"
+                }
+            },
+            {
+                "field": "currentBike",
+                "title": "Current Bike",
+                "width": "",
+                "align": "left",
+                "formatter": "plaintext",
+                "formatterParams": {
+                    "target": "_blank"
+                }
+            },
+            {
+                "field": "history",
+                "title": "History",
+                "width": "",
+                "align": "left",
+                "formatter": "plaintext",
+                "formatterParams": {
+                    "target": "_blank"
+                }
+            },
+            {
+                "field": "id",
+                "title": "MongoID",
+                "width": "",
+                "align": "left",
+                "formatter": "plaintext",
+                "formatterParams": {
+                    "target": "_blank"
+                }
+            }
+        ],
+        "outputs": 1,
+        "cts": true,
+        "x": 590,
+        "y": 840,
+        "wires": [
+            [
+                "4c8a01e8050a72c9"
+            ]
+        ]
+    },
+    {
+        "id": "af4124b1986e8913",
+        "type": "debug",
+        "z": "f8bc54da016b7352",
+        "g": "9b84c8604e72fb7c",
+        "name": "List racks",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 580,
+        "y": 900,
+        "wires": []
+    },
+    {
+        "id": "c029c211e04a2394",
+        "type": "ui_button",
+        "z": "f8bc54da016b7352",
+        "g": "55056c7c8fe0e0fa",
+        "name": "",
+        "group": "d5fc11106263432a",
+        "order": 1,
+        "width": "6",
+        "height": "1",
+        "passthru": true,
+        "label": "Reload Users",
+        "tooltip": "",
+        "color": "",
+        "bgcolor": "",
+        "className": "",
+        "icon": "",
+        "payload": "",
+        "payloadType": "str",
+        "topic": "topic",
+        "topicType": "msg",
+        "x": 140,
+        "y": 100,
+        "wires": [
+            [
+                "6c99690d313674a5"
+            ]
+        ]
+    },
+    {
+        "id": "c801ed0796b9531f",
+        "type": "ui_form",
+        "z": "f8bc54da016b7352",
+        "g": "55056c7c8fe0e0fa",
+        "name": "",
+        "label": "Create User Form",
+        "group": "d5fc11106263432a",
+        "order": 5,
+        "width": 0,
+        "height": 0,
+        "options": [
+            {
+                "label": "RFID",
+                "value": "rfid",
+                "type": "text",
+                "required": true,
+                "rows": null
+            },
+            {
+                "label": "First Name",
+                "value": "firstName",
+                "type": "text",
+                "required": true,
+                "rows": null
+            },
+            {
+                "label": "Last Name",
+                "value": "lastName",
+                "type": "text",
+                "required": true,
+                "rows": null
+            },
+            {
+                "label": "Email",
+                "value": "email",
+                "type": "text",
+                "required": true,
+                "rows": null
+            },
+            {
+                "label": "Phone",
+                "value": "phone",
+                "type": "text",
+                "required": true,
+                "rows": null
+            }
+        ],
+        "formValue": {
+            "rfid": "",
+            "firstName": "",
+            "lastName": "",
+            "email": "",
+            "phone": ""
+        },
+        "payload": "",
+        "submit": "submit",
+        "cancel": "cancel",
+        "topic": "topic",
+        "topicType": "msg",
+        "splitLayout": "",
+        "className": "",
+        "x": 290,
+        "y": 200,
+        "wires": [
+            [
+                "75dcfd903f845752",
+                "467e14ec67bcd335"
+            ]
+        ]
+    },
+    {
+        "id": "75dcfd903f845752",
+        "type": "http request",
+        "z": "f8bc54da016b7352",
+        "g": "55056c7c8fe0e0fa",
+        "name": "POST User",
+        "method": "POST",
+        "ret": "txt",
+        "paytoqs": "ignore",
+        "url": "https://hepl.local/smartpedals/api/users",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 490,
+        "y": 200,
+        "wires": [
+            [
+                "6c99690d313674a5"
+            ]
+        ]
+    },
+    {
+        "id": "18cf4d5268fb78fe",
+        "type": "function",
+        "z": "f8bc54da016b7352",
+        "g": "55056c7c8fe0e0fa",
+        "name": "Parse URL",
+        "func": "var rfid = flow.get(\"selected_rfid\");\nif (rfid) {\n    msg.url = \"https://hepl.local/smartpedals/api/users/\" + rfid;\n} else {\n    return null;\n}\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1090,
+        "y": 60,
+        "wires": [
+            [
+                "39a785b620c5e9dd"
+            ]
+        ]
+    },
+    {
+        "id": "39a785b620c5e9dd",
+        "type": "http request",
+        "z": "f8bc54da016b7352",
+        "g": "55056c7c8fe0e0fa",
+        "name": "PUT User",
+        "method": "PUT",
+        "ret": "txt",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 1300,
+        "y": 60,
+        "wires": [
+            [
+                "6c99690d313674a5"
+            ]
+        ]
+    },
+    {
+        "id": "cee420648a2fae74",
+        "type": "ui_template",
+        "z": "f8bc54da016b7352",
+        "g": "55056c7c8fe0e0fa",
+        "group": "d5fc11106263432a",
+        "name": "RFID Read-Only",
+        "order": 3,
+        "width": 0,
+        "height": 0,
+        "format": "<div class=\"form-group\">\n    <label for=\"rfid\">RFID</label>\n    <input type=\"text\" class=\"form-control\" id=\"rfid\" value=\"{{msg.payload.rfid}}\" readonly>\n</div>",
+        "storeOutMessages": true,
+        "fwdInMessages": true,
+        "resendOnRefresh": true,
+        "templateScope": "local",
+        "className": "",
+        "x": 1100,
+        "y": 120,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "24fa24e048ba197b",
+        "type": "ui_form",
+        "z": "f8bc54da016b7352",
+        "d": true,
+        "g": "55056c7c8fe0e0fa",
+        "name": "",
+        "label": "Update User Form",
+        "group": "d5fc11106263432a",
+        "order": 6,
+        "width": 0,
+        "height": 0,
+        "options": [
+            {
+                "label": "RFID",
+                "value": "rfid",
+                "type": "text",
+                "required": true,
+                "rows": null
+            },
+            {
+                "label": "Email",
+                "value": "email",
+                "type": "text",
+                "required": true,
+                "rows": null
+            },
+            {
+                "label": "Phone",
+                "value": "phone",
+                "type": "text",
+                "required": true,
+                "rows": null
+            }
+        ],
+        "formValue": {
+            "rfid": "",
+            "email": "",
+            "phone": ""
+        },
+        "payload": "",
+        "submit": "submit",
+        "cancel": "cancel",
+        "topic": "topic",
+        "topicType": "msg",
+        "splitLayout": "",
+        "className": "",
+        "x": 850,
+        "y": 80,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "f411fd8a3ba8e179",
+        "type": "ui_form",
+        "z": "f8bc54da016b7352",
+        "g": "55056c7c8fe0e0fa",
+        "name": "",
+        "label": "Update User Form",
+        "group": "d5fc11106263432a",
+        "order": 7,
+        "width": 0,
+        "height": 0,
+        "options": [
+            {
+                "label": "Email",
+                "value": "email",
+                "type": "text",
+                "required": true,
+                "rows": null
+            },
+            {
+                "label": "Phone",
+                "value": "phone",
+                "type": "text",
+                "required": true,
+                "rows": null
+            }
+        ],
+        "formValue": {
+            "email": "",
+            "phone": ""
+        },
+        "payload": "",
+        "submit": "submit",
+        "cancel": "cancel",
+        "topic": "topic",
+        "topicType": "msg",
+        "splitLayout": "",
+        "className": "",
+        "x": 850,
+        "y": 60,
+        "wires": [
+            [
+                "18cf4d5268fb78fe",
+                "3ee03c0578b85bb9"
+            ]
+        ]
+    },
+    {
+        "id": "60f21c88ccc35115",
+        "type": "change",
+        "z": "f8bc54da016b7352",
+        "g": "55056c7c8fe0e0fa",
+        "name": "",
+        "rules": [
+            {
+                "t": "set",
+                "p": "selected_rfid",
+                "pt": "flow",
+                "to": "payload.rfid",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 860,
+        "y": 100,
+        "wires": [
+            [
+                "cee420648a2fae74",
+                "7e2f479b23078632",
+                "f411fd8a3ba8e179"
+            ]
+        ]
+    },
+    {
+        "id": "7e2f479b23078632",
+        "type": "ui_button",
+        "z": "f8bc54da016b7352",
+        "g": "55056c7c8fe0e0fa",
+        "name": "",
+        "group": "d5fc11106263432a",
+        "order": 2,
+        "width": "6",
+        "height": "1",
+        "passthru": false,
+        "label": "Delete Selected",
+        "tooltip": "",
+        "color": "",
+        "bgcolor": "red",
+        "className": "",
+        "icon": "",
+        "payload": "",
+        "payloadType": "str",
+        "topic": "topic",
+        "topicType": "msg",
+        "x": 860,
+        "y": 200,
+        "wires": [
+            [
+                "0c2749b569b0413c",
+                "be8a254a80eacc5f"
+            ]
+        ]
+    },
+    {
+        "id": "0c2749b569b0413c",
+        "type": "function",
+        "z": "f8bc54da016b7352",
+        "g": "55056c7c8fe0e0fa",
+        "name": "Parse URL",
+        "func": "var rfid = flow.get(\"selected_rfid\");\nif (rfid) {\n    msg.url = \"https://hepl.local/smartpedals/api/users/\" + rfid;\n} else {\n    return null;\n}\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1090,
+        "y": 200,
+        "wires": [
+            [
+                "152c12bc16ecac1b"
+            ]
+        ]
+    },
+    {
+        "id": "152c12bc16ecac1b",
+        "type": "http request",
+        "z": "f8bc54da016b7352",
+        "g": "55056c7c8fe0e0fa",
+        "name": "DELETE User",
+        "method": "DELETE",
+        "ret": "txt",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 1320,
+        "y": 200,
+        "wires": [
+            [
+                "6c99690d313674a5"
+            ]
+        ]
+    },
+    {
+        "id": "5c21914314f46c6f",
+        "type": "ui_button",
+        "z": "f8bc54da016b7352",
+        "g": "b257784fc310cf77",
+        "name": "",
+        "group": "0775276a207f2728",
+        "order": 1,
+        "width": "6",
+        "height": "1",
+        "passthru": true,
+        "label": "Reload Bikes",
+        "tooltip": "",
+        "color": "",
+        "bgcolor": "",
+        "className": "",
+        "icon": "",
+        "payload": "",
+        "payloadType": "str",
+        "topic": "topic",
+        "topicType": "msg",
+        "x": 130,
+        "y": 500,
+        "wires": [
+            [
+                "eb3fad66b17b0eec"
+            ]
+        ]
+    },
+    {
+        "id": "cdac9782a301f6d5",
+        "type": "ui_form",
+        "z": "f8bc54da016b7352",
+        "g": "b257784fc310cf77",
+        "name": "",
+        "label": "Create Bike Form",
+        "group": "0775276a207f2728",
+        "order": 5,
+        "width": 0,
+        "height": 0,
+        "options": [
+            {
+                "label": "Bike Id",
+                "value": "bikeId",
+                "type": "text",
+                "required": true,
+                "rows": null
+            },
+            {
+                "label": "Current Station",
+                "value": "currentStation",
+                "type": "text",
+                "required": true,
+                "rows": null
+            }
+        ],
+        "formValue": {
+            "bikeId": "",
+            "currentStation": ""
+        },
+        "payload": "",
+        "submit": "submit",
+        "cancel": "cancel",
+        "topic": "topic",
+        "topicType": "msg",
+        "splitLayout": "",
+        "className": "",
+        "x": 290,
+        "y": 600,
+        "wires": [
+            [
+                "bb32ba065cd20e51"
+            ]
+        ]
+    },
+    {
+        "id": "bb32ba065cd20e51",
+        "type": "http request",
+        "z": "f8bc54da016b7352",
+        "g": "b257784fc310cf77",
+        "name": "POST Bike",
+        "method": "POST",
+        "ret": "txt",
+        "paytoqs": "ignore",
+        "url": "https://hepl.local/smartpedals/api/bikes",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 490,
+        "y": 600,
+        "wires": [
+            [
+                "eb3fad66b17b0eec",
+                "5f58f34948838bea"
+            ]
+        ]
+    },
+    {
+        "id": "a34d14723ef72959",
+        "type": "ui_button",
+        "z": "f8bc54da016b7352",
+        "g": "9b84c8604e72fb7c",
+        "name": "",
+        "group": "859378531cff719c",
+        "order": 1,
+        "width": "6",
+        "height": "1",
+        "passthru": true,
+        "label": "Reload Racks",
+        "tooltip": "",
+        "color": "",
+        "bgcolor": "",
+        "className": "",
+        "icon": "",
+        "payload": "",
+        "payloadType": "str",
+        "topic": "topic",
+        "topicType": "msg",
+        "x": 140,
+        "y": 880,
+        "wires": [
+            [
+                "5f58f34948838bea"
+            ]
+        ]
+    },
+    {
+        "id": "9a1f66e64687c3e3",
+        "type": "ui_form",
+        "z": "f8bc54da016b7352",
+        "g": "9b84c8604e72fb7c",
+        "name": "",
+        "label": "Create Station Form",
+        "group": "859378531cff719c",
+        "order": 5,
+        "width": 0,
+        "height": 0,
+        "options": [
+            {
+                "label": "Rack Id",
+                "value": "rackId",
+                "type": "text",
+                "required": true,
+                "rows": null
+            }
+        ],
+        "formValue": {
+            "rackId": ""
+        },
+        "payload": "",
+        "submit": "submit",
+        "cancel": "cancel",
+        "topic": "topic",
+        "topicType": "msg",
+        "splitLayout": "",
+        "className": "",
+        "x": 300,
+        "y": 980,
+        "wires": [
+            [
+                "59126513093bed39"
+            ]
+        ]
+    },
+    {
+        "id": "59126513093bed39",
+        "type": "http request",
+        "z": "f8bc54da016b7352",
+        "g": "9b84c8604e72fb7c",
+        "name": "POST Rack",
+        "method": "POST",
+        "ret": "txt",
+        "paytoqs": "ignore",
+        "url": "https://hepl.local/smartpedals/api/racks",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 490,
+        "y": 980,
+        "wires": [
+            [
+                "5f58f34948838bea"
+            ]
+        ]
+    },
+    {
+        "id": "00b9aeb9fbc23300",
+        "type": "change",
+        "z": "f8bc54da016b7352",
+        "g": "b257784fc310cf77",
+        "name": "",
+        "rules": [
+            {
+                "t": "set",
+                "p": "selected_bikeId",
+                "pt": "flow",
+                "to": "payload.bikeId",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 870,
+        "y": 500,
+        "wires": [
+            [
+                "1251abc21f160cd7",
+                "cf4dbb5fc8baa1c6",
+                "068a87f993742a2a"
+            ]
+        ]
+    },
+    {
+        "id": "cf4dbb5fc8baa1c6",
+        "type": "ui_form",
+        "z": "f8bc54da016b7352",
+        "g": "b257784fc310cf77",
+        "name": "",
+        "label": "Update Bike Form",
+        "group": "0775276a207f2728",
+        "order": 6,
+        "width": 0,
+        "height": 0,
+        "options": [
+            {
+                "label": "Current Rack",
+                "value": "currentRack",
+                "type": "text",
+                "required": true,
+                "rows": null
+            }
+        ],
+        "formValue": {
+            "currentRack": ""
+        },
+        "payload": "",
+        "submit": "submit",
+        "cancel": "cancel",
+        "topic": "topic",
+        "topicType": "msg",
+        "splitLayout": "",
+        "className": "",
+        "x": 850,
+        "y": 460,
+        "wires": [
+            [
+                "331497235d83f3b2"
+            ]
+        ]
+    },
+    {
+        "id": "331497235d83f3b2",
+        "type": "function",
+        "z": "f8bc54da016b7352",
+        "g": "b257784fc310cf77",
+        "name": "Parse URL",
+        "func": "var bikeId = flow.get(\"selected_bikeId\");\nif (bikeId) {\n    msg.url = \"https://hepl.local/smartpedals/api/bikes/\" + bikeId;\n} else {\n    return null;\n}\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1090,
+        "y": 460,
+        "wires": [
+            [
+                "c01fe338a67d8dfb"
+            ]
+        ]
+    },
+    {
+        "id": "1251abc21f160cd7",
+        "type": "ui_template",
+        "z": "f8bc54da016b7352",
+        "g": "b257784fc310cf77",
+        "group": "0775276a207f2728",
+        "name": "Bike Id Read-Only",
+        "order": 3,
+        "width": 0,
+        "height": 0,
+        "format": "<div class=\"form-group\">\n    <label for=\"bikeId\">Bike Id</label>\n    <input type=\"text\" class=\"form-control\" id=\"rfid\" value=\"{{msg.payload.bikeId}}\" readonly>\n</div>",
+        "storeOutMessages": true,
+        "fwdInMessages": true,
+        "resendOnRefresh": true,
+        "templateScope": "local",
+        "className": "",
+        "x": 1110,
+        "y": 520,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "c01fe338a67d8dfb",
+        "type": "http request",
+        "z": "f8bc54da016b7352",
+        "g": "b257784fc310cf77",
+        "name": "PUT Bike",
+        "method": "PUT",
+        "ret": "txt",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 1300,
+        "y": 460,
+        "wires": [
+            [
+                "eb3fad66b17b0eec",
+                "5f58f34948838bea"
+            ]
+        ]
+    },
+    {
+        "id": "068a87f993742a2a",
+        "type": "ui_button",
+        "z": "f8bc54da016b7352",
+        "g": "b257784fc310cf77",
+        "name": "",
+        "group": "0775276a207f2728",
+        "order": 2,
+        "width": "6",
+        "height": "1",
+        "passthru": false,
+        "label": "Delete Selected",
+        "tooltip": "",
+        "color": "",
+        "bgcolor": "red",
+        "className": "",
+        "icon": "",
+        "payload": "",
+        "payloadType": "str",
+        "topic": "topic",
+        "topicType": "msg",
+        "x": 840,
+        "y": 600,
+        "wires": [
+            [
+                "1356cff6e7d41cdb"
+            ]
+        ]
+    },
+    {
+        "id": "1356cff6e7d41cdb",
+        "type": "function",
+        "z": "f8bc54da016b7352",
+        "g": "b257784fc310cf77",
+        "name": "Parse URL",
+        "func": "var bikeId = flow.get(\"selected_bikeId\");\nif (bikeId) {\n    msg.url = \"https://hepl.local/smartpedals/api/bikes/\" + bikeId;\n} else {\n    return null;\n}\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1070,
+        "y": 600,
+        "wires": [
+            [
+                "ce94fc9745a6fc25"
+            ]
+        ]
+    },
+    {
+        "id": "ce94fc9745a6fc25",
+        "type": "http request",
+        "z": "f8bc54da016b7352",
+        "g": "b257784fc310cf77",
+        "name": "DELETE Bike",
+        "method": "DELETE",
+        "ret": "txt",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 1300,
+        "y": 600,
+        "wires": [
+            [
+                "eb3fad66b17b0eec",
+                "5f58f34948838bea"
+            ]
+        ]
+    },
+    {
+        "id": "45e3a03616de5f07",
+        "type": "ui_button",
+        "z": "f8bc54da016b7352",
+        "g": "9b84c8604e72fb7c",
+        "name": "",
+        "group": "859378531cff719c",
+        "order": 2,
+        "width": "6",
+        "height": "1",
+        "passthru": false,
+        "label": "Delete Selected",
+        "tooltip": "",
+        "color": "",
+        "bgcolor": "red",
+        "className": "",
+        "icon": "",
+        "payload": "",
+        "payloadType": "str",
+        "topic": "topic",
+        "topicType": "msg",
+        "x": 840,
+        "y": 980,
+        "wires": [
+            [
+                "698e40dc97376c31"
+            ]
+        ]
+    },
+    {
+        "id": "4c8a01e8050a72c9",
+        "type": "change",
+        "z": "f8bc54da016b7352",
+        "g": "9b84c8604e72fb7c",
+        "name": "",
+        "rules": [
+            {
+                "t": "set",
+                "p": "selected_rackId",
+                "pt": "flow",
+                "to": "payload.rackId",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 870,
+        "y": 880,
+        "wires": [
+            [
+                "45e3a03616de5f07",
+                "6d57a246890b8592"
+            ]
+        ]
+    },
+    {
+        "id": "698e40dc97376c31",
+        "type": "function",
+        "z": "f8bc54da016b7352",
+        "g": "9b84c8604e72fb7c",
+        "name": "Parse URL",
+        "func": "var rackId = flow.get(\"selected_rackId\");\nif (rackId) {\n    msg.url = \"https://hepl.local/smartpedals/api/racks/\" + rackId;\n} else {\n    return null;\n}\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1070,
+        "y": 980,
+        "wires": [
+            [
+                "159d9e6703c7229c"
+            ]
+        ]
+    },
+    {
+        "id": "6d57a246890b8592",
+        "type": "ui_template",
+        "z": "f8bc54da016b7352",
+        "g": "9b84c8604e72fb7c",
+        "group": "859378531cff719c",
+        "name": "Bike Id Read-Only",
+        "order": 3,
+        "width": 0,
+        "height": 0,
+        "format": "<div class=\"form-group\">\n    <label for=\"rackId\">Rack Id</label>\n    <input type=\"text\" class=\"form-control\" id=\"rfid\" value=\"{{msg.payload.rackId}}\" readonly>\n</div>",
+        "storeOutMessages": true,
+        "fwdInMessages": true,
+        "resendOnRefresh": true,
+        "templateScope": "local",
+        "className": "",
+        "x": 1110,
+        "y": 900,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "159d9e6703c7229c",
+        "type": "http request",
+        "z": "f8bc54da016b7352",
+        "g": "9b84c8604e72fb7c",
+        "name": "DELETE Rack",
+        "method": "DELETE",
+        "ret": "txt",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 1300,
+        "y": 980,
+        "wires": [
+            [
+                "5f58f34948838bea"
+            ]
+        ]
+    },
+    {
+        "id": "84ecd95c05af92d6",
+        "type": "inject",
+        "z": "f8bc54da016b7352",
+        "g": "830b084e8a80b671",
+        "name": "Refresh Location List",
+        "props": [],
+        "repeat": "60",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.5,
+        "topic": "",
+        "x": 160,
+        "y": 1100,
+        "wires": [
+            [
+                "736c65572a9a15fe"
+            ]
+        ]
+    },
+    {
+        "id": "736c65572a9a15fe",
+        "type": "http request",
+        "z": "f8bc54da016b7352",
+        "g": "830b084e8a80b671",
+        "name": "GET Locations",
+        "method": "GET",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "https://hepl.local/smartpedals/api/locations",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 370,
+        "y": 1100,
+        "wires": [
+            [
+                "aa6f70d8dde6d49a",
+                "c15d5aff5b41d478"
+            ]
+        ]
+    },
+    {
+        "id": "aa6f70d8dde6d49a",
+        "type": "ui_table",
+        "z": "f8bc54da016b7352",
+        "g": "830b084e8a80b671",
+        "group": "295d5c9fedf5a340",
+        "name": "Location Table",
+        "order": 2,
+        "width": "12",
+        "height": "4",
+        "columns": [],
+        "outputs": 0,
+        "cts": false,
+        "x": 600,
+        "y": 1100,
+        "wires": []
+    },
+    {
+        "id": "c15d5aff5b41d478",
+        "type": "debug",
+        "z": "f8bc54da016b7352",
+        "g": "830b084e8a80b671",
+        "name": "List locations",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 590,
+        "y": 1160,
+        "wires": []
+    },
+    {
+        "id": "060533021c7542a1",
+        "type": "ui_button",
+        "z": "f8bc54da016b7352",
+        "g": "830b084e8a80b671",
+        "name": "",
+        "group": "295d5c9fedf5a340",
+        "order": 1,
+        "width": "6",
+        "height": "1",
+        "passthru": true,
+        "label": "Reload Locations",
+        "tooltip": "",
+        "color": "",
+        "bgcolor": "",
+        "className": "",
+        "icon": "",
+        "payload": "",
+        "payloadType": "str",
+        "topic": "topic",
+        "topicType": "msg",
+        "x": 150,
+        "y": 1140,
+        "wires": [
+            [
+                "736c65572a9a15fe"
+            ]
+        ]
+    },
+    {
+        "id": "ui_ctrl_sink",
+        "type": "ui_ui_control",
+        "z": "f8bc54da016b7352",
+        "g": "d518b4f2f81a3194",
+        "name": "Dashboard control",
+        "events": "all",
+        "x": 650,
+        "y": 1340,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "49971e87a61607b8",
+        "type": "ui_button",
+        "z": "f8bc54da016b7352",
+        "g": "d518b4f2f81a3194",
+        "name": "",
+        "group": "b652d6b0464b09a5",
+        "order": 1,
+        "width": 0,
+        "height": 0,
+        "passthru": false,
+        "label": "Users Collection",
+        "tooltip": "",
+        "color": "",
+        "bgcolor": "",
+        "className": "",
+        "icon": "",
+        "payload": "Users",
+        "payloadType": "str",
+        "topic": "topic",
+        "topicType": "msg",
+        "x": 120,
+        "y": 1280,
+        "wires": [
+            [
+                "d9b5d74366de92a0"
+            ]
+        ]
+    },
+    {
+        "id": "99bad1f7329d0580",
+        "type": "ui_button",
+        "z": "f8bc54da016b7352",
+        "g": "d518b4f2f81a3194",
+        "name": "",
+        "group": "b652d6b0464b09a5",
+        "order": 1,
+        "width": 0,
+        "height": 0,
+        "passthru": false,
+        "label": "Bikes Collection",
+        "tooltip": "",
+        "color": "",
+        "bgcolor": "",
+        "className": "",
+        "icon": "",
+        "payload": "Bikes",
+        "payloadType": "str",
+        "topic": "topic",
+        "topicType": "msg",
+        "x": 120,
+        "y": 1320,
+        "wires": [
+            [
+                "d9b5d74366de92a0"
+            ]
+        ]
+    },
+    {
+        "id": "e706f2e850459f30",
+        "type": "ui_button",
+        "z": "f8bc54da016b7352",
+        "g": "d518b4f2f81a3194",
+        "name": "",
+        "group": "b652d6b0464b09a5",
+        "order": 1,
+        "width": 0,
+        "height": 0,
+        "passthru": false,
+        "label": "Racks Collection",
+        "tooltip": "",
+        "color": "",
+        "bgcolor": "",
+        "className": "",
+        "icon": "",
+        "payload": "Racks",
+        "payloadType": "str",
+        "topic": "topic",
+        "topicType": "msg",
+        "x": 130,
+        "y": 1360,
+        "wires": [
+            [
+                "d9b5d74366de92a0"
+            ]
+        ]
+    },
+    {
+        "id": "556ad038455a700f",
+        "type": "ui_button",
+        "z": "f8bc54da016b7352",
+        "g": "d518b4f2f81a3194",
+        "name": "",
+        "group": "b652d6b0464b09a5",
+        "order": 1,
+        "width": 0,
+        "height": 0,
+        "passthru": false,
+        "label": "Locations Collection",
+        "tooltip": "",
+        "color": "",
+        "bgcolor": "",
+        "className": "",
+        "icon": "",
+        "payload": "Locations",
+        "payloadType": "str",
+        "topic": "topic",
+        "topicType": "msg",
+        "x": 140,
+        "y": 1400,
+        "wires": [
+            [
+                "d9b5d74366de92a0"
+            ]
+        ]
+    },
+    {
+        "id": "d9b5d74366de92a0",
+        "type": "function",
+        "z": "f8bc54da016b7352",
+        "g": "d518b4f2f81a3194",
+        "name": "Group Selector",
+        "func": "// Get the incoming payload (e.g., \"Users\", \"Bikes\", etc.)\nconst collectionName = msg.payload;\n\n// Define all possible groups to hide\nconst allGroups = [\"MongoDB_Users\", \"MongoDB_Bikes\", \"MongoDB_Racks\", \"MongoDB_Locations\"];\n\n// Determine which group to show\nconst groupToShow = \"MongoDB_\" + collectionName;\n\n// Filter out the group to show from the list of all groups\nconst groupsToHide = allGroups.filter(group => group !== groupToShow);\n\n// Create the new payload\nmsg.payload = {\n    \"group\": {\n        \"show\": [groupToShow],\n        \"hide\": groupsToHide\n    }\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 380,
+        "y": 1340,
+        "wires": [
+            [
+                "ui_ctrl_sink"
+            ]
+        ]
+    },
+    {
+        "id": "467e14ec67bcd335",
+        "type": "function",
+        "z": "f8bc54da016b7352",
+        "d": true,
+        "g": "156e55908398abf2",
+        "name": "Prepare Email Notification Create",
+        "func": "// Get env vars\nconst token = env.get(\"MAILTRAP_TOKEN\");\nif (!token) {\n    node.error(\"MAILTRAP_TOKEN not in the environment\");\n    return null;\n}\n\nconst target = env.get(\"TARGET_EMAIL\");\nif (!target) {\n    node.error(\"TARGET_EMAIL not in the environment\");\n    return null;\n}\n\nconst sender = env.get(\"MAILTRAP_EMAIL\")\nif (!sender) {\n    node.error(\"MAILTRAP_EMAIL not in the environment\");\n    return null;\n}\n\n// RFID\nconst rfid = msg.payload.rfid;\n\n// API request\nmsg.headers = {\n    \"Authorization\": `Bearer ${token}`,\n    \"Content-Type\": \"application/json\"\n};\n\nmsg.payload = {\n    from: { email: sender, name: \"Node-RED User Creation\" },\n    to: [{ email: target }],\n    subject: \"User Created Notification\",\n    text: `The user ${rfid} has been created.`,\n    category: \"HEPL\"\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 560,
+        "y": 280,
+        "wires": [
+            [
+                "94360ae29ca327ba"
+            ]
+        ]
+    },
+    {
+        "id": "94360ae29ca327ba",
+        "type": "http request",
+        "z": "f8bc54da016b7352",
+        "d": true,
+        "g": "156e55908398abf2",
+        "name": "Send Email",
+        "method": "POST",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "https://send.api.mailtrap.io/api/send",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 830,
+        "y": 280,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "3ee03c0578b85bb9",
+        "type": "function",
+        "z": "f8bc54da016b7352",
+        "d": true,
+        "g": "156e55908398abf2",
+        "name": "Prepare Email Notification Update",
+        "func": "// Get env vars\nconst token = env.get(\"MAILTRAP_TOKEN\");\nif (!token) {\n    node.error(\"MAILTRAP_TOKEN not in the environment\");\n    return null;\n}\n\nconst target = env.get(\"TARGET_EMAIL\");\nif (!target) {\n    node.error(\"TARGET_EMAIL not in the environment\");\n    return null;\n}\n\nconst sender = env.get(\"MAILTRAP_EMAIL\")\nif (!sender) {\n    node.error(\"MAILTRAP_EMAIL not in the environment\");\n    return null;\n}\n\n// RFID\nconst rfid = flow.get(\"selected_rfid\");\n\n// API request\nmsg.headers = {\n    \"Authorization\": `Bearer ${token}`,\n    \"Content-Type\": \"application/json\"\n};\n\nmsg.payload = {\n    from: { email: sender, name: \"Node-RED User Update\" },\n    to: [{ email: target }],\n    subject: \"User Updated Notification\",\n    text: `The user ${rfid} has been updated.`,\n    category: \"HEPL\"\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1140,
+        "y": 280,
+        "wires": [
+            [
+                "ed1da2a50a22c4b4"
+            ]
+        ]
+    },
+    {
+        "id": "ed1da2a50a22c4b4",
+        "type": "http request",
+        "z": "f8bc54da016b7352",
+        "d": true,
+        "g": "156e55908398abf2",
+        "name": "Send Email",
+        "method": "POST",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "https://send.api.mailtrap.io/api/send",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 1410,
+        "y": 280,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "be8a254a80eacc5f",
+        "type": "function",
+        "z": "f8bc54da016b7352",
+        "d": true,
+        "g": "156e55908398abf2",
+        "name": "Prepare Email Notification Delete",
+        "func": "// Get env vars\nconst token = env.get(\"MAILTRAP_TOKEN\");\nif (!token) {\n    node.error(\"MAILTRAP_TOKEN not in the environment\");\n    return null;\n}\n\nconst target = env.get(\"TARGET_EMAIL\");\nif (!target) {\n    node.error(\"TARGET_EMAIL not in the environment\");\n    return null;\n}\n\nconst sender = env.get(\"MAILTRAP_EMAIL\")\nif (!sender) {\n    node.error(\"MAILTRAP_EMAIL not in the environment\");\n    return null;\n}\n\n// RFID\nconst rfid = flow.get(\"selected_rfid\");\n\n// API request\nmsg.headers = {\n    \"Authorization\": `Bearer ${token}`,\n    \"Content-Type\": \"application/json\"\n};\n\nmsg.payload = {\n    from: { email: sender, name: \"Node-RED User Delete\" },\n    to: [{ email: target }],\n    subject: \"User Deleted Notification\",\n    text: `The user ${rfid} has been deleted.`,\n    category: \"HEPL\"\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1140,
+        "y": 320,
+        "wires": [
+            [
+                "b9b2ce468ff6f3a2"
+            ]
+        ]
+    },
+    {
+        "id": "b9b2ce468ff6f3a2",
+        "type": "http request",
+        "z": "f8bc54da016b7352",
+        "d": true,
+        "g": "156e55908398abf2",
+        "name": "Send Email",
+        "method": "POST",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "https://send.api.mailtrap.io/api/send",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 1410,
+        "y": 320,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "a478b31126c3351f",
+        "type": "mqtt out",
+        "z": "f8bc54da016b7352",
+        "g": "ce7103cf8fb8ffd3",
+        "name": "",
+        "topic": "hepl/disponibilities",
+        "qos": "0",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "8a1ea2c3f4d65411",
+        "x": 710,
+        "y": 660,
+        "wires": []
+    },
+    {
+        "id": "bb1a69b3b8d0ad89",
+        "type": "mqtt in",
+        "z": "f8bc54da016b7352",
+        "d": true,
+        "g": "ce7103cf8fb8ffd3",
+        "name": "",
+        "topic": "hepl/disponibilities",
+        "qos": "0",
+        "datatype": "utf8",
+        "broker": "8a1ea2c3f4d65411",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 510,
+        "y": 700,
+        "wires": [
+            [
+                "554a2a8d96016272"
+            ]
+        ]
+    },
+    {
+        "id": "554a2a8d96016272",
+        "type": "debug",
+        "z": "f8bc54da016b7352",
+        "d": true,
+        "g": "ce7103cf8fb8ffd3",
+        "name": "debug 1",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 720,
+        "y": 700,
+        "wires": []
+    },
+    {
+        "id": "1b2f13aa43ec6c46",
+        "type": "function",
+        "z": "f8bc54da016b7352",
+        "g": "ce7103cf8fb8ffd3",
+        "name": "Count Bikes",
+        "func": "const rows = Array.isArray(msg.payload) ? msg.payload : [];\nconst availableCount = rows.filter(b => (b?.status ?? \"\").toLowerCase() !== \"in_use\").length;\n\n// Formate en anglais avec pluriel\nmsg.payload = `There ${availableCount === 1 ? \"is\" : \"are\"} ${availableCount} available bike${availableCount === 1 ? \"\" : \"s\"}`;\nmsg.topic = \"hepl/disponibilities\";\n\n// Save last data\nmsg.retain = true;\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 490,
+        "y": 660,
+        "wires": [
+            [
+                "a478b31126c3351f"
+            ]
+        ]
+    },
+    {
+        "id": "d32a796efc663434",
+        "type": "ui_template",
+        "z": "f8bc54da016b7352",
+        "g": "d80adb4003cfe74b",
+        "group": "53e823d79dde1009",
+        "name": "Support IFrame",
+        "order": 0,
+        "width": "12",
+        "height": "6",
+        "format": "<iFrame src=\"https://hepl.local/smartpedals/support\" style=\"width:100%; height:100%; border:none;\"></iFrame>",
+        "storeOutMessages": true,
+        "fwdInMessages": true,
+        "resendOnRefresh": true,
+        "templateScope": "local",
+        "className": "",
+        "x": 920,
+        "y": 1280,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "bf779d9e7c32b47d",
+        "type": "ui_worldmap",
+        "z": "96c3cda21b90f5d3",
+        "group": "641b5e8937934ab6",
+        "order": 0,
+        "width": "24",
+        "height": "14",
+        "name": "",
+        "lat": "50.620023",
+        "lon": "5.581924",
+        "zoom": "14",
+        "layer": "OSMC",
+        "cluster": "",
+        "maxage": "",
+        "usermenu": "hide",
+        "layers": "hide",
+        "panit": "false",
+        "panlock": "false",
+        "zoomlock": "false",
+        "hiderightclick": "true",
+        "coords": "none",
+        "showgrid": "false",
+        "showruler": "true",
+        "allowFileDrop": "false",
+        "path": "/worldmap",
+        "overlist": "DR,CO,RA,DN,HM",
+        "maplist": "OSMG,OSMC,EsriC,EsriS,EsriT,EsriDG,UKOS",
+        "mapname": "",
+        "mapurl": "",
+        "mapopt": "",
+        "mapwms": false,
+        "x": 760,
+        "y": 200,
+        "wires": []
+    },
+    {
+        "id": "5101c51eb8c0b6a4",
+        "type": "inject",
+        "z": "96c3cda21b90f5d3",
+        "g": "adf31f5d4620e8e5",
+        "name": "Refresh Location List",
+        "props": [],
+        "repeat": "60",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.5,
+        "topic": "",
+        "x": 160,
+        "y": 60,
+        "wires": [
+            [
+                "5d029d15f4cf0d4b"
+            ]
+        ]
+    },
+    {
+        "id": "5d029d15f4cf0d4b",
+        "type": "http request",
+        "z": "96c3cda21b90f5d3",
+        "g": "adf31f5d4620e8e5",
+        "name": "GET Locations",
+        "method": "GET",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "https://hepl.local/smartpedals/api/locations",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 370,
+        "y": 60,
+        "wires": [
+            [
+                "3d769ece20c467fa",
+                "bd4c65845b708a95"
+            ]
+        ]
+    },
+    {
+        "id": "3d769ece20c467fa",
+        "type": "debug",
+        "z": "96c3cda21b90f5d3",
+        "g": "adf31f5d4620e8e5",
+        "name": "List locations",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 590,
+        "y": 120,
+        "wires": []
+    },
+    {
+        "id": "a74bae290d95723e",
+        "type": "ui_button",
+        "z": "96c3cda21b90f5d3",
+        "g": "adf31f5d4620e8e5",
+        "name": "",
+        "group": "641b5e8937934ab6",
+        "order": 1,
+        "width": "6",
+        "height": "1",
+        "passthru": true,
+        "label": "Reload Locations",
+        "tooltip": "",
+        "color": "",
+        "bgcolor": "",
+        "className": "",
+        "icon": "",
+        "payload": "",
+        "payloadType": "str",
+        "topic": "topic",
+        "topicType": "msg",
+        "x": 150,
+        "y": 100,
+        "wires": [
+            [
+                "5d029d15f4cf0d4b"
+            ]
+        ]
+    },
+    {
+        "id": "bd4c65845b708a95",
+        "type": "function",
+        "z": "96c3cda21b90f5d3",
+        "name": "Bikes Positions",
+        "func": "const PALETTE = [\n  \"#e6194B\", \"#3cb44b\", \"#ffe119\", \"#4363d8\", \"#f58231\",\n  \"#911eb4\", \"#42d4f4\", \"#f032e6\", \"#bfef45\", \"#fabed4\",\n  \"#469990\", \"#dcbeff\", \"#9A6324\", \"#fffac8\", \"#800000\",\n  \"#aaffc3\", \"#808000\", \"#ffd8b1\", \"#000075\", \"#a9a9a9\"\n];\n\nfunction getColorFromString(str) {\n  // FNV-1a rapide\n  let h = 2166136261;\n  for (let i = 0; i < str.length; i++) {\n    h ^= str.charCodeAt(i);\n    h = Math.imul(h, 16777619);\n  }\n  const idx = (h >>> 0) % PALETTE.length;\n  return PALETTE[idx];\n}\n\n// Main function to process the bike locations\nfunction processBikeLocations(msg) {\n  const rows = Array.isArray(msg.payload) ? msg.payload : [];\n  const perBike = new Map();\n\n  // Group locations by bikeId\n  rows.forEach((location) => {\n    if (!location || !location.bikeId || !location.coordinates) return;\n\n    const lat = parseFloat(location.coordinates.lat);\n    const lon = parseFloat(location.coordinates.lon);\n    if (isNaN(lat) || isNaN(lon)) return;\n\n    const ts = new Date(location.timestamp);\n    if (isNaN(ts.getTime())) return;\n\n    if (!perBike.has(location.bikeId)) {\n      perBike.set(location.bikeId, []);\n    }\n    perBike.get(location.bikeId).push({ bikeId: location.bikeId, lat, lon, ts });\n  });\n\n  // Process each bike's locations\n  perBike.forEach((locations, bikeId) => {\n    const sortedLocations = locations\n      .sort((a, b) => a.ts - b.ts)\n      .slice(-10); // Get the last 10 locations\n\n    if (sortedLocations.length === 0) return;\n\n    const color = getColorFromString(bikeId);\n\n    // Send the polyline for the bike's track\n    const line = sortedLocations.map((p) => [p.lat, p.lon]);\n    node.send({\n      payload: {\n        name: `${bikeId}-track`,\n        line,\n        color,\n        weight: 3,\n        opacity: 0.85,\n        layer: \"bikes\",\n      },\n    });\n\n    // Send trail dots for all but the latest point\n    for (let i = 0; i < sortedLocations.length - 1; i++) {\n      const p = sortedLocations[i];\n      const fillOpacity = 0.2 + (i / Math.max(1, sortedLocations.length - 2)) * 0.5;\n      node.send({\n        payload: {\n          name: `${bikeId}#trail${i}`,\n          lat: p.lat,\n          lon: p.lon,\n          radius: 7,\n          color,\n          fillColor: color,\n          opacity: fillOpacity,\n          fillOpacity,\n          layer: \"bikes\",\n        },\n      });\n    }\n\n    // Send the latest point as a bicycle icon\n    const last = sortedLocations[sortedLocations.length - 1];\n    node.send({\n      payload: {\n        name: `${bikeId}#latest`,\n        lat: last.lat,\n        lon: last.lon,\n        icon: \"bicycle\",\n        iconColor: color,\n        color,\n        layer: \"bikes\",\n      },\n    });\n  });\n\n  // Fit the map to the bounds of the \"bikes\" layer\n  node.send({ payload: { command: \"fit\", layer: \"bikes\" } });\n  return null;\n}\n\n// Call the function with the msg object provided by Node-RED\nprocessBikeLocations(msg);\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 600,
+        "y": 200,
+        "wires": [
+            [
+                "bf779d9e7c32b47d"
+            ]
+        ]
+    }
+]

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>SmartPedals Chat</title>
+  <!-- auto-refresh every 5 seconds -->
+  <meta http-equiv="refresh" content="5">
+</head>
+<body>
+  <h1>SmartPedals Chat</h1>
+  <p><a href="{{ url_for('index') }}">&larr; Back to Dashboard</a></p>
+
+  {% with flashes = get_flashed_messages() %}
+    {% if flashes %}
+      <ul>
+        {% for message in flashes %}
+          <li>{{ message }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  {% endwith %}
+
+  <!-- Chat container with scrollbar -->
+  <div id="chat-container" style="border:1px solid #000; width:600px; height:300px; overflow-y:auto;">
+    <ul>
+      {% for msg in messages %}
+        <li><strong>{{ msg.who }}</strong>: {{ msg.text }}</li>
+      {% else %}
+        <li><em>No messages yet.</em></li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <form action="{{ url_for('chat_send') }}" method="post">
+    <input
+      type="text"
+      name="message"
+      placeholder="Type your message…"
+      required
+      autofocus
+    >
+    <button type="submit">Send</button>
+  </form>
+
+  <!-- script to scroll to bottom on load -->
+  <script>
+    window.addEventListener("load", function() {
+      var chat = document.getElementById("chat-container");
+      chat.scrollTop = chat.scrollHeight;
+    });
+  </script>
+</body>
+</html>

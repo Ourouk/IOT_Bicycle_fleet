@@ -1,0 +1,38 @@
+services:
+  flask_mqtt_sender:
+    build: ./app
+    container_name: smartpedals_mqtt_sender
+    user: "1000:1000"
+    ports:
+      - "5000:5000"
+    env_file:
+      - env_smartpedals.env
+    restart: unless-stopped
+    networks:
+      - default
+      - management_caddy_network
+    volumes:
+      - ./app/templates:/app/templates:ro
+      - ./app/certs/ca.crt:/etc/ssl/ca.crt:ro
+      - ./app/certs/enterprise-mqtt.key.unlocked:/etc/ssl/enterprise-mqtt.key.unlocked:ro
+      - ./app/certs/enterprise-mqtt.crt:/etc/ssl/enterprise-mqtt.crt:ro
+
+  nodered:
+    image: nodered/node-red:4.1
+    container_name: nodered_dashboard
+    user: "1000:1000"
+    ports:
+      - "1880:1880"
+    restart: unless-stopped
+    env_file:
+      - env_nodered.env
+    networks:
+      - default
+      - management_caddy_network
+    volumes:
+      - ./nodered/data:/data
+      - ./nodered/certs:/certs:ro
+
+networks:
+  management_caddy_network:
+    external: true

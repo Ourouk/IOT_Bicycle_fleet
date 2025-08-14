@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SmartPedals Tester</title>
+</head>
+<body>
+    <h1>SmartPedals MQTT Test</h1>
+
+    <nav>
+      <a href="{{ url_for('chat') }}">Webex Chat</a>
+    </nav>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <ul>
+        {% for message in messages %}
+          <li>{{ message }}</li>
+        {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+
+    <form action="/smartpedals/send" method="post" style="display:inline-block;">
+        <button type="submit">Send Test Sensor Data</button>
+    </form>
+
+    <form action="/smartpedals/reconnect" method="post" style="display:inline-block; margin-left:10px;">
+        <button type="submit">Reconnect Subscriber</button>
+    </form>
+
+    <h2>Last received messages:</h2>
+    <ul>
+        {% for msg in messages %}
+            <li>{{ msg }}</li>
+        {% else %}
+            <li>No messages received yet.</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
