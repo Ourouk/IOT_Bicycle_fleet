@@ -225,7 +225,7 @@ def parse_args():
     p.add_argument("--seed", type=int, default=None, help="Random seed for reproducibility.")
     p.add_argument("--rate-hz", type=float, default=1.0, help="Output update rate (Hz).")
     p.add_argument("--serial", type=str, default=None, help="Serial port to write to (e.g., /dev/ttyUSB0, COM5).")
-    p.add_argument("--baud", type=int, default=4800, help="Serial baud rate (default 4800).")
+    p.add_argument("--baud", type=int, default=9600, help="Serial baud rate (default 9600).")
     p.add_argument("--loop", action="store_true", help="Loop the route continuously.")
     p.add_argument("--sentences", type=str, default="RMC,GGA", help="Comma list of sentences to output (RMC,GGA,VTG).")
     p.add_argument("--start-time", type=str, default=None,
