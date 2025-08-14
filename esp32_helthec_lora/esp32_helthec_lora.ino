@@ -91,12 +91,16 @@ void aes_decrypt(const uint8_t *input, size_t length, uint8_t *output, size_t *o
   // ========================== Lighting  ==========================
   #define LIGHTPIN 3              // Pin Light Sensor
   #define RELAYPIN 2              // Pin controlling relay (bike power lock)
-  #define LIGHT_THRESHOLD 512     // Threshold for light level
+  #define LIGHT_THRESHOLD 750     // Threshold for light level
   #define MOVING_AVG_WINDOW 10    // Window size for moving average
 
   int lightReadings[MOVING_AVG_WINDOW]; // Array to store light readings
   int currentIndex = 0;                // Current index in the array
   int sumReadings = 0;                 // Sum of readings for moving average
+  //Anti Relay Flipping
+  bool relay_state = false;
+  static uint32_t s_lastrelaychange = 0;
+  const uint32_t RELAY_DELAY_MS     = 5000;
   //Auto Light System
   void light_ifDark(); //Note the bike light is managed by the relay
 
@@ -261,6 +265,8 @@ void loop() {
   if(identified)
   {
     light_ifDark();
+    // Stop bipping
+     digitalWrite(BUZZERPIN, LOW);
   }else
   {
     bip_ifStolen();
@@ -564,11 +570,15 @@ void light_ifDark() {
   currentIndex = (currentIndex + 1) % MOVING_AVG_WINDOW;
 
   const int lightLevel = sumReadings / MOVING_AVG_WINDOW;
-
-  if (identified) { // UNLOCKED: light system active
-    digitalWrite(RELAYPIN, (lightLevel < LIGHT_THRESHOLD) ? HIGH : LOW);
-  } else {          // LOCKED: force OFF
-    digitalWrite(RELAYPIN, LOW);
+  //Avoid quick flipping
+  bool new_relay_state = (lightLevel < LIGHT_THRESHOLD);
+  if(relay_state != new_relay_state && s_lastrelaychange + RELAY_DELAY_MS < millis()){
+    if(new_relay_state)
+      digitalWrite(RELAYPIN,HIGH);
+    else
+      digitalWrite(RELAYPIN,LOW);
+    s_lastrelaychange = millis();
+    relay_state = new_relay_state;
   }
 }
 
@@ -601,29 +611,10 @@ static inline bool isMovingNow() {
 
 
 void bip_ifStolen() {
-  const uint32_t now = millis();
   const bool moving = isMovingNow();
-
-  // Track sustained motion
-  if (moving) {
-    if (s_motionStartMs == 0) {
-      s_motionStartMs = now;  // start timing
-    }
-    // Activate once motion has lasted long enough
-    if ((uint32_t)(now - s_motionStartMs) >= MOTION_REQUIRED_MS) {
-      s_buzzerActive = true;
-    }
-  } else {
-    // Not moving: allow a short grace before resetting the timer/activation
-    const bool withinGrace = (uint32_t)(now - s_lastAboveMs) < MOTION_PAUSE_GRACE_MS;
-    if (!withinGrace) {
-      s_motionStartMs = 0;    // reset the sustained-motion timer
-      s_buzzerActive  = false; // deactivate after a real stop
-    }
-    // If withinGrace, keep timing/activation as-is
-  }
-
-  // Drive the buzzer
+  s_buzzerActive = moving;          // on when moving, off when not
+  s_motionStartMs = moving ? s_motionStartMs : 0; // optional: clear timer on stop
   digitalWrite(BUZZERPIN, s_buzzerActive ? HIGH : LOW);
 }
+
 // ========================== End of Functions Definitions ===============
