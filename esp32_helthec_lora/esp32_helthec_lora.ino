@@ -65,7 +65,7 @@ const unsigned char aes_key[16] = {
 
 // ========================== Lock/Authorization State ===================
 
-bool identified = false;  // true = UNLOCKED, false = LOCKED
+bool identified = true;  // true = UNLOCKED, false = LOCKED
 
 // ========================== Forward Declarations =======================
 // Formater
@@ -254,7 +254,7 @@ void loop() {
     light_ifDark();
   }else
   {
-
+    bip_ifStolen();
   }
   // -------------------------- LoRa TX break for GPS --------------------
   // TX only when idle; callbacks return to continuous RX.
