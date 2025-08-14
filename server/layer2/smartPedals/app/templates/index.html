@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SmartPedals Dashboard</title>
+</head>
+<body>
+
+    <!-- Simple “file-system” nav -->
+    <p>
+      <a href="{{ url_for('index') }}">/smartpedals/</a> |
+      <a href="{{ url_for('weather') }}">/smartpedals/weather</a>
+    </p>
+
+    <!-- Header -->
+    {% if section == 'data' %}
+      <h1>Data Dashboard</h1>
+    {% else %}
+      <h1>Weather Dashboard</h1>
+    {% endif %}
+
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <ul>
+        {% for msg in messages %}
+          <li style="color: green;">{{ msg }}</li>
+        {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+
+    <!-- Data section -->
+    {% if section == 'data' %}
+      <form method="post" action="{{ url_for('index') }}">
+        <button name="action" value="clear_all">Clear Database</button>
+        <button name="action" value="delete_selected">Delete Selected</button>
+        <ul>
+        {% for item in data %}
+          <li>
+            <input type="checkbox"
+                   name="entry_checkbox"
+                   value="{{ item._id|string }}">
+            <strong>{{ item.topic }}</strong>: {{ item.payload }}
+          </li>
+        {% else %}
+          <li>No data available</li>
+        {% endfor %}
+        </ul>
+      </form>
+
+      <script>
+        const es = new EventSource("{{ url_for('stream') }}");
+        es.onmessage = () => window.location.reload();
+        es.onerror = e => console.error("SSE error", e);
+      </script>
+
+    <!-- Weather section -->
+    {% else %}
+      <form method="get" action="{{ url_for('weather') }}">
+        <label>City:
+          <input type="text" name="city" value="{{ city }}">
+        </label>
+        <button>Fetch</button>
+      </form>
+
+      {% if weather %}
+        <p><strong>City:</strong> {{ weather.name }}</p>
+        <p><strong>Temp:</strong> {{ weather.main.temp }} °C</p>
+        <p><strong>Condition:</strong> {{ weather.weather[0].description }}</p>
+      {% else %}
+        <p>No weather data.</p>
+      {% endif %}
+    {% endif %}
+
+</body>
+</html>

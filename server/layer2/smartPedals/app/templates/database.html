@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>SmartPedals Database</title>
+</head>
+<body>
+  <p><a href="{{ url_for('home') }}">← Home</a></p>
+  <h1>Data Dashboard</h1>
+  <h2>Available bikes</h2>
+    <p style="font-size: 1.6em; font-weight: bold; margin: 0.2em 0;">
+      {{ disponibilities_count if disponibilities_count is not none else "—" }}
+    </p>
+    <p style="color: #555; margin-top: 0;">
+      {{ disponibilities or "Waiting for availability..." }}
+    </p>
+
+  {% with messages = get_flashed_messages() %}
+    {% if messages %}
+      <ul>
+      {% for msg in messages %}
+        <li style="color: green;">{{ msg }}</li>
+      {% endfor %}
+      </ul>
+    {% endif %}
+  {% endwith %}
+
+  <form method="post" action="{{ url_for('database') }}">
+    <button name="action" value="clear_all">Clear Database</button>
+    <button name="action" value="delete_selected">Delete Selected</button>
+    <ul>
+      {% for item in data %}
+        <li>
+          <input type="checkbox"
+                 name="entry_checkbox"
+                 value="{{ item._id|string }}">
+          <strong>{{ item.topic }}</strong>: {{ item.payload }}
+        </li>
+      {% else %}
+        <li>No data available</li>
+      {% endfor %}
+    </ul>
+  </form>
+
+  <script>
+    const es = new EventSource("{{ url_for('stream') }}");
+    es.onmessage = () => window.location.reload();
+    es.onerror = e => console.error("SSE error", e);
+  </script>
+</body>
+</html>

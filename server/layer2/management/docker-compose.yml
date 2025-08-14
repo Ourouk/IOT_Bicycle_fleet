@@ -1,0 +1,35 @@
+#version: '3.8'
+
+services:
+  caddy:
+    image: caddy:2.10
+    container_name: caddy
+    user: "1000:1000" # user no-root mapping (id -u)
+    ports:
+      - "80:80"
+      - "443:443"
+    restart: unless-stopped
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./caddy/data:/data
+      - ./caddy/config:/config
+      - ./caddy/certs:/certs:ro
+    networks:
+      - caddy_network
+
+  portainer:
+    image: portainer/portainer-ce:2.27.0
+    container_name: portainer
+    user: "1000:995" # uid 1000 and gid 995 -> docker to be enable to use socket (getent group docker)
+    ports:
+      - "9443:9443" # direct access if no reverse proxy
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./portainer/data:/data
+    networks:
+      - caddy_network
+
+networks:
+  caddy_network:
+    driver: bridge

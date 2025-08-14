@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>SmartPedals Weather</title>
+</head>
+<body>
+  <p><a href="{{ url_for('home') }}">← Home</a></p>
+  <h1>Weather Dashboard</h1>
+
+  <form method="get" action="{{ url_for('weather') }}">
+    <label>
+      City:
+      <input type="text" name="city" value="{{ city }}">
+    </label>
+    <button>Fetch</button>
+  </form>
+
+  {% with messages = get_flashed_messages() %}
+    {% if messages %}
+      <ul>
+      {% for msg in messages %}
+        <li style="color: red;">{{ msg }}</li>
+      {% endfor %}
+      </ul>
+    {% endif %}
+  {% endwith %}
+
+  {% if weather %}
+    <p><strong>City:</strong> {{ weather.name }}</p>
+    <p><strong>Temp:</strong> {{ weather.main.temp }} °C</p>
+    <p><strong>Condition:</strong> {{ weather.weather[0].description }}</p>
+  {% else %}
+    <p>No weather data.</p>
+  {% endif %}
+
+</body>
+</html>

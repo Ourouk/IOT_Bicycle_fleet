@@ -1,0 +1,45 @@
+https://hepl.local {
+    tls /certs/client-caddy.crt /certs/client-caddy.key.unlocked {
+        client_auth off
+    }
+
+    # Redirect without trailing slash
+    redir /cockpit /cockpit/
+    redir /portainer /portainer/
+    redir /smartpedals /smartpedals/
+    redir /api /api/
+    # Redirect automatically if empty
+    redir / /cockpit/
+
+    # Reverse proxy for Cockpit at /cockpit/*
+    # Cockpit: needs the /cockpit prefix preserved
+    handle /cockpit/* {
+        #reverse_proxy https://192.168.56.3:9090 {
+        reverse_proxy https://hepl.local:9090 {
+            transport http {
+                tls_insecure_skip_verify
+            }
+        }
+    }
+
+    # Reverse proxy for Portainer at /portainer/*
+    # Portainer: needs the prefix removed
+    handle_path /portainer/* {
+        reverse_proxy https://portainer:9443 {
+            transport http {
+                tls_insecure_skip_verify
+            }
+        }
+    }
+
+    # Reverse proxy for SmartPedals main app at /smartpedals/*
+    # handle to not strip the prefix
+    handle /smartpedals/* {
+        # reverse_proxy http://smartpedals_app:5000
+        reverse_proxy https://smartpedals_app:8443 {
+            transport http {
+                tls_insecure_skip_verify
+            }
+        }
+    }
+}

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>SmartPedals Support</title>
+</head>
+<body>
+  <p><a href="{{ url_for('home') }}">← Home</a></p>
+  <h1>Support – HEPL</h1>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <ul>
+      {% for cat, msg in messages %}
+        <li><strong>{{ cat }}</strong> — {{ msg }}</li>
+      {% endfor %}
+      </ul>
+    {% endif %}
+  {% endwith %}
+
+  {% if not room_id %}
+    <form method="post" action="{{ url_for('support_create') }}">
+      <label>
+        Title:
+        <input type="text" name="title" placeholder="{{ default_title }}">
+      </label>
+      <button>Create space</button>
+    </form>
+    <p>Members to invite (env <code>SUPPORT_MEMBERS</code>): {{ support_members or "(none)" }}</p>
+    <p>The bot creates the space and posts a welcome message. Open the space and click <em>Meet</em> to start the call.</p>
+  {% else %}
+    <p><strong>Room ID:</strong> <code>{{ room_id }}</code></p>
+
+    <p>
+      <!-- App deep-link -->
+      <a href="webexteams://spaces/{{ room_id }}">Open in Webex app</a>
+    </p>
+
+    {% if message_web_url %}
+      <!-- Browser link (points to the welcome message, opens the space on the web) -->
+      <p>
+        <a href="{{ message_web_url }}" target="_blank" rel="noopener">Open on the web</a>
+      </p>
+    {% endif %}
+
+    <form method="post" action="{{ url_for('support_delete') }}">
+      <input type="hidden" name="room_id" value="{{ room_id }}">
+      <button onclick="return confirm('Delete this space?')">Delete space</button>
+    </form>
+  {% endif %}
+</body>
+</html>

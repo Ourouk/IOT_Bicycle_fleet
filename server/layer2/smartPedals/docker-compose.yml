@@ -1,0 +1,70 @@
+services:
+  mqtt: 
+    image: eclipse-mosquitto:2.0
+    container_name: mosquitto_broker
+    user: "1000:1000"
+    ports:
+      - "1883:1883"
+      - "8883:8883"
+    restart: unless-stopped
+    volumes:
+      - ./mqtt/config/mosquitto_prefix_userpass_acl_encrypt_mutualauth.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./mqtt/config/passfile:/mosquitto/config/passfile:ro
+      - ./mqtt/config/aclfile:/mosquitto/config/aclfile:ro
+      - ./mqtt/certs:/mosquitto/certs:ro
+      #- ./mqtt/config/01_basic.conf:/mosquitto/config/01_basic:ro
+      - ./mqtt/data:/mosquitto/data
+      - ./mqtt/log:/mosquitto/log
+
+  mongodb:
+    image: mongo:7
+    container_name: mongodb
+    user: "1000:1000"
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=administrator
+      - MONGO_INITDB_ROOT_PASSWORD=Administrator
+      - MONGO_INITDB_DATABASE=smartpedals
+    restart: unless-stopped
+    command: >
+      --tlsMode requireTLS
+      --tlsCertificateKeyFile /etc/ssl/mongodb.pem
+      --tlsCAFile /etc/ssl/ca.crt
+      --bind_ip_all
+    volumes:
+      - ./mongodb/data:/data/db
+      - ./mongodb/configdb:/data/configdb
+      - ./mongodb/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+      - ./mongodb/certs:/etc/ssl:ro
+
+  app:
+    build: ./app
+    container_name: smartpedals_app
+    user: "1000:1000"
+    ports:
+      - "8443:8443" 
+      #- "5000:5000"
+    env_file:
+      - env_smartpedals.env
+    depends_on:
+      - mqtt
+      - mongodb
+    restart: unless-stopped
+    volumes:
+      - ./app/certs/ca.crt:/etc/ssl/ca.crt:ro
+      - ./app/certs/smartpedals.pem:/etc/ssl/smartpedals.pem:ro
+      - ./app/certs/client-mqtt.key.unlocked:/etc/ssl/client-mqtt.key.unlocked:ro
+      - ./app/certs/client-mqtt.crt:/etc/ssl/client-mqtt.crt:ro
+      - ./app/certs/testmosquitto/mosquitto.org.crt:/etc/ssl/testmosquitto/mosquitto.org.crt:ro
+      - ./app/certs/testmosquitto/client.crt:/etc/ssl/testmosquitto/client.crt:ro
+      - ./app/certs/testmosquitto/client.key:/etc/ssl/testmosquitto/client.key:ro
+      - ./app/certs/client-flask.key.unlocked:/etc/ssl/client-flask.key.unlocked:ro
+      - ./app/certs/client-flask.crt:/etc/ssl/client-flask.crt:ro
+    networks:
+      - default
+      - management_caddy_network
+
+networks:
+  management_caddy_network:
+    external: true

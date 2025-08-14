@@ -1,0 +1,4 @@
+services:
+  caddy:
+    extra_hosts:
+      - "hepl.local:192.168.196.74"
