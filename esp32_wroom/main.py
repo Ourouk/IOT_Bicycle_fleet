@@ -184,7 +184,6 @@ STATE_AUTH_LOCKING           = "auth_locking"            # waiting auth for lock
 STATE_LOCKING_UNLOCK_RELAY   = "locking_unlock_relay"    # relay energized, grant access
 STATE_LOCKING_WAIT_OBJECT    = "locking_wait_object"     # wait for wheel near
 STATE_LOCKING_READ_BIKE_RFID = "locking_read_bike_rfid"  # (kept for clarity; merged in WAIT_OBJECT)
-STATE_LOCKED                 = "locked"                  # red on, relay off
 
 STATE_AUTH_UNLOCKING         = "auth_unlocking"          # waiting auth for unlocking flow
 STATE_UNLOCKING_RELAY_ON     = "unlocking_relay_on"      # relay on, green on; user removes bike
