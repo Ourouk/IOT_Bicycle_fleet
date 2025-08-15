@@ -1,7 +1,21 @@
+
+// Lora  
 #include "LoRaWan_APP.h"
+// Default functions
 #include "Arduino.h"
+// Integrated GPS parser from heltec
 #include "HT_TinyGPS++.h"
+//Embeded AES lib
 #include "mbedtls/aes.h"
+
+// For a connection via I2C using the Arduino Wire include:
+#include <Wire.h>               
+#include "HT_SSD1306Wire.h"
+#include "images.h"
+
+static SSD1306Wire  display(0x3c, 500000, SDA_OLED, SCL_OLED, GEOMETRY_128_64, RST_OLED); // addr , freq , i2c group , resolution , rst
+
+
 
 // Each bike of the fleet is associated with an ID
 #define BIKE_ID 1
@@ -127,6 +141,35 @@ void aes_decrypt(const uint8_t *input, size_t length, uint8_t *output, size_t *o
   static inline bool isMovingNow();
   void bip_ifStolen();
 
+  // ---------------------------------------------------------------------------
+  void drawMinimalOneLiner() {
+    char buf[192];
+    if (gps.location.isValid()) {
+      if (gps.speed.isValid()) {
+        snprintf(buf, sizeof(buf),
+                "%s  Lat: %.5f  Lng: %.5f  Speed: %.1f km/h",
+                identified ? "UNLOCKED" : "LOCKED",
+                gps.location.lat(), gps.location.lng(),
+                gps.speed.kmph());
+      } else {
+        snprintf(buf, sizeof(buf),
+                "%s  Lat: %.5f  Lng: %.5f  Speed: N/A",
+                identified ? "UNLOCKED" : "LOCKED",
+                gps.location.lat(), gps.location.lng());
+      }
+    } else {
+      snprintf(buf, sizeof(buf),
+              "%s  GPS: NO FIX  Speed: %s",
+              identified ? "UNLOCKED" : "LOCKED",
+              gps.speed.isValid() ? "unknown" : "N/A");
+    }
+
+    display.clear();
+    display.setFont(ArialMT_Plain_10);           // fits best for wrapping
+    display.setTextAlignment(TEXT_ALIGN_LEFT);
+    display.drawStringMaxWidth(0, 0, 128, buf);  // wrap onto the OLED
+    display.display();
+  }
 #if DEBUG_SENSORS
 static unsigned long s_lastSensorsDebugMs = 0;
 static void debug_printSensors();
@@ -222,15 +265,20 @@ void setup() {
   digitalWrite(RELAYPIN, LOW);
   digitalWrite(BUZZERPIN, LOW);
 
-
   pinMode(LIGHTPIN, INPUT);
   for (int i = 0; i < MOVING_AVG_WINDOW; i++) lightReadings[i] = 0;
+
+  // Initialising the UI will init the display too.
+  display.init();
+  display.setFont(ArialMT_Plain_10);
 
   delay(200);
 }
 
 // ========================== Loop =======================================
 void loop() {
+  //Display Infor
+  drawMinimalOneLiner();
   // Process radio IRQs
   Radio.IrqProcess();
   // -------------------------- GPS handling  ----------------------------
@@ -266,7 +314,7 @@ void loop() {
   {
     light_ifDark();
     // Stop bipping
-     digitalWrite(BUZZERPIN, LOW);
+    digitalWrite(BUZZERPIN, LOW);
   }else
   {
     bip_ifStolen();
@@ -288,6 +336,8 @@ void loop() {
         s_lastSensorsDebugMs = millis();
       }
     #endif
+    // Example: left-aligned, small font
+  
 }
 
 // ========================== Radio callbacks ============================
@@ -608,7 +658,6 @@ static inline bool isMovingNow() {
   }
   return s_moving;
 }
-
 
 void bip_ifStolen() {
   const bool moving = isMovingNow();
