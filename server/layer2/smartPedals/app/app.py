@@ -4,6 +4,7 @@ import threading
 import time
 import ssl
 import re
+import json
 
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -578,10 +579,10 @@ def update_bike(bike_id):
                         "bikeId": bike_id,
                         "action": "undock",
                         "timestamp": now}}})
-                    racks_col.update_one({"rackId": new_rack}, {"$set": {"currentBike": bike_id}, "$push": {"history": {
-                        "bikeId": bike_id,
-                        "action": "dock",
-                        "timestamp": now}}})
+                racks_col.update_one({"rackId": new_rack}, {"$set": {"currentBike": bike_id}, "$push": {"history": {
+                    "bikeId": bike_id,
+                    "action": "dock",
+                    "timestamp": now}}})
             return jsonify({"status": "updated"}), 200
         else:
             return jsonify({"status": "not_found"}), 404
@@ -641,8 +642,24 @@ def get_rack(rack_id):
 @app.route("/smartpedals/api/racks", methods=["POST"])
 def create_rack():
     rack_data = request.get_json()
+    rack_id = rack_data.get("rackId")
+
+    # Station ID is required
+    station_id = rack_data.get("stationId")
+    if station_id:
+        station = stations_col.find_one({"stationId": station_id})
+        if not station:
+            return jsonify({"status": "error", "message": f"Station '{station_id}' not found"}), 400
+
     try:
         result = racks_col.insert_one(rack_data)
+
+        # Add this rack to the station
+        if station_id:
+            stations_col.update_one(
+                {"stationId": station_id},
+                {"$push": {"racks": rack_id}}
+            )
         return jsonify({"status": "success", "id": str(result.inserted_id)}), 201
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 400
@@ -654,8 +671,18 @@ def delete_rack(rack_id):
     # Don't delete if there is a bike
     if rack.get("currentBike") is not None:
         return jsonify({"status": "error", "message": f"Cannot delete rack '{rack_id}' while a bike is docked"}), 400
-    result = racks_col.delete_one({"rackId": rack_id})
-    if result.deleted_count:
+
+    # Remove the rack from the station
+    station_id = rack.get("stationId")
+    if station_id:
+        stations_col.update_one(
+            {"stationId": station_id},
+            {"$pull": {"racks": rack_id}}
+        )
+
+    # Delete the rack
+    res = racks_col.delete_one({"rackId": rack_id})
+    if res.deleted_count:
         return jsonify({"status": "deleted"}), 200
     return jsonify({"status": "not_found"}), 404
 
@@ -666,11 +693,55 @@ def list_stations():
     stations = []
     for d in docs:
         stations.append({
+            "id": str(d["_id"]),
             "stationId": d.get("stationId"),
             "name": d.get("name"),
             "racks": d.get("racks")
         })
-    return jsonify(racks), 200
+    return jsonify(stations), 200
+
+@app.route("/smartpedals/api/stations/<string:station_id>", methods=["GET"])
+def get_station(station_id):
+    d = stations_col.find_one({"stationId": station_id})
+    if not d:
+        return jsonify({"status": "not_found"}), 404
+    station = {
+        "id": str(d["_id"]),
+        "stationId": d.get("stationId"),
+        "name": d.get("name"),
+        "racks": d.get("racks", [])
+    }
+    return jsonify(station), 200
+
+@app.route("/smartpedals/api/stations", methods=["POST"])
+def create_station():
+    station_data = request.get_json()
+    try:
+        result = stations_col.insert_one(station_data)
+        return jsonify({"status": "success", "id": str(result.inserted_id)}), 201
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+@app.route("/smartpedals/api/stations/<string:station_id>", methods=["DELETE"])
+def delete_station(station_id):
+    # Check if there are racks in this station
+    station = stations_col.find_one({"stationId": station_id})
+
+    # Check if there are racks with bikes
+    racks = station.get("racks", [])
+    for rack in racks:
+        rack_data = racks_col.find_one({"rackId": rack})
+        if rack_data and rack_data.get("currentBike") is not None:
+            return jsonify({"status": "error", "message": f"Cannot delete station '{station_id}' while a bike is docked"}), 400
+        
+        # Remove the racks from the racks collection
+        racks_col.delete_one({"rackId": rack})
+
+    # racks_col.delete_many({"stationId": station_id})
+    result = stations_col.delete_one({"stationId": station_id})
+    if result.deleted_count:
+        return jsonify({"status": "deleted"}), 200
+    return jsonify({"status": "not_found"}), 404
 
 # Locations
 @app.route("/smartpedals/api/locations", methods=["GET"])
@@ -742,108 +813,13 @@ def weather():
             weather = resp.json()
         except requests.RequestException as e:
             app.logger.error(f"Error weather API: {e}")
-
     return render_template("weather.html", weather=weather, city=city)
-
-# Webex support page
-# Support page
-# @app.route("/smartpedals/support", methods=["GET"])
-# def support():
-#     room_id = (request.args.get("room_id") or "").strip()
-#     message_web_url = (request.args.get("message_web_url") or "").strip()
-#     return render_template("support.html", room_id=room_id, message_web_url=message_web_url, default_title=SUPPORT_DEFAULT_TITLE, support_members=os.environ.get("SUPPORT_MEMBERS", ""))
-#
-# # Create room + invite members + post welcome (capture web URL)
-# @app.route("/smartpedals/support/create", methods=["POST"])
-# def support_create():
-#     token = WEBEX_ACCESS_TOKEN
-#     if not token:
-#         flash("WEBEX_ACCESS_TOKEN is missing (bot token).", "error")
-#         return redirect(url_for("support"))
-#
-#     title = request.form.get("title") or SUPPORT_DEFAULT_TITLE
-#     headers_json = {
-#         "Authorization": f"Bearer {token}",
-#         "Content-Type": "application/json",
-#         "Accept": "application/json",
-#     }
-#
-#     # Create the room
-#     try:
-#         r = requests.post(f"{WEBEX_API_BASE}/rooms", headers=headers_json,
-#                           json={"title": title}, timeout=8)
-#         r.raise_for_status()
-#         room_id = r.json().get("id")
-#         if not room_id:
-#             flash("Room creation succeeded but no room ID returned.", "error")
-#             return redirect(url_for("support"))
-#     except requests.RequestException as e:
-#         flash(f"Webex room creation error: {e}", "error")
-#         return redirect(url_for("support"))
-#
-#     # Invite members (skip *.bot — the bot is already in)
-#     members_raw = os.environ.get("SUPPORT_MEMBERS", "")
-#     members = [m.strip() for m in members_raw.split(",") if m.strip()]
-#     for email in members:
-#         if email.lower().endswith(".bot"):
-#             continue
-#         try:
-#             mr = requests.post(f"{WEBEX_API_BASE}/memberships", headers=headers_json,
-#                                json={"roomId": room_id, "personEmail": email}, timeout=8)
-#             if mr.status_code not in (200, 409):  # 409 = already a member
-#                 mr.raise_for_status()
-#         except requests.RequestException as e:
-#             app.logger.error(f"[WEBEX] Invite {email} error: {e}")
-#
-#     # Post welcome message and capture its web URL (opens the space in the browser)
-#     message_web_url = ""
-#     try:
-#         msg = "Support space created. Open the space and click **Meet** to start the call."
-#         mr = requests.post(f"{WEBEX_API_BASE}/messages", headers=headers_json,
-#                            json={"roomId": room_id, "markdown": msg}, timeout=8)
-#         mr.raise_for_status()
-#         message_web_url = (mr.json() or {}).get("webUrl", "")
-#     except requests.RequestException as e:
-#         app.logger.error(f"[WEBEX] Post message error: {e}")
-#
-#     # Redirect back with room_id (and message web URL) as query params (no storage needed)
-#     return redirect(url_for("support", room_id=room_id, message_web_url=message_web_url))
-#
-# # Delete room
-# @app.route("/smartpedals/support/delete", methods=["POST"])
-# def support_delete():
-#     token = WEBEX_ACCESS_TOKEN
-#     if not token:
-#         flash("WEBEX_ACCESS_TOKEN is missing (bot token).", "error")
-#         return redirect(url_for("support"))
-#
-#     room_id = (request.form.get("room_id") or "").strip()
-#     if not room_id:
-#         flash("Missing room_id.", "error")
-#         return redirect(url_for("support"))
-#
-#     headers = {"Authorization": f"Bearer {token}"}
-#     try:
-#         r = requests.delete(f"{WEBEX_API_BASE}/rooms/{room_id}", headers=headers, timeout=8)
-#         if r.status_code == 204:
-#             flash("Space deleted", "success")
-#         else:
-#             try:
-#                 err = r.json()
-#             except Exception:
-#                 err = r.text
-#             flash(f"Delete failed: {r.status_code} {err}", "error")
-#     except requests.RequestException as e:
-#         flash(f"Webex delete error: {e}", "error")
-#
-#     return redirect(url_for("support"))
 
 # Support page
 @app.route("/smartpedals/support", methods=["GET"])
 def support():
     room_id = (request.args.get("room_id") or "").strip()
-    message_web_url = (request.args.get("message_web_url") or "").strip()
-    return render_template("support.html", room_id=room_id, message_web_url=message_web_url, default_title=SUPPORT_DEFAULT_TITLE, support_members=os.environ.get("SUPPORT_MEMBERS", ""))
+    return render_template("support.html", room_id=room_id, default_title=SUPPORT_DEFAULT_TITLE, support_members=os.environ.get("SUPPORT_MEMBERS", ""))
 
 # Create room + invite members + post welcome (capture web URL)
 @app.route("/smartpedals/support/create", methods=["POST"])
@@ -861,9 +837,7 @@ def support_create():
         "Accept": "application/json",
     }
 
-    # --- MINIMAL CHANGES START HERE ---
-
-    # 1. Check for and delete existing rooms with the same title
+    # Check if a room with the same title already exists and delete it
     app.logger.info(f"Checking for existing support spaces with title: '{title}' to delete.")
     try:
         # Get rooms with the specified title (Webex API might return partial matches)
@@ -906,14 +880,13 @@ def support_create():
         # Continue to try creating a new room even if cleanup fails
         pass
 
-    # 2. Create a brand new room
+    # Create new room
     room_id = None
-    message_web_url = ""
     try:
-        r = requests.post(f"{WEBEX_API_BASE}/rooms", headers=headers_json,
+        room_creation_response = requests.post(f"{WEBEX_API_BASE}/rooms", headers=headers_json,
                           json={"title": title}, timeout=8)
-        r.raise_for_status()
-        room_id = r.json().get("id")
+        room_creation_response.raise_for_status()
+        room_id = room_creation_response.json().get("id")
         if not room_id:
             flash("Room creation succeeded but no room ID returned.", "error")
             app.logger.error("New room creation succeeded but no room ID returned.")
@@ -926,19 +899,21 @@ def support_create():
         app.logger.error(f"Error creating new room: {e}")
         return redirect(url_for("support"))
 
-    # Invite members (skip *.bot — the bot is already in)
+    # Invite members
     members_raw = os.environ.get("SUPPORT_MEMBERS", "")
     members = [m.strip() for m in members_raw.split(",") if m.strip()]
+    # Check if there are any members to invite
     for email in members:
+        # Skip bot emails, already a member
         if email.lower().endswith(".bot"):
             app.logger.info(f"Skipping bot email in membership: {email}")
             continue
         try:
-            mr = requests.post(f"{WEBEX_API_BASE}/memberships", headers=headers_json,
+            membership_response = requests.post(f"{WEBEX_API_BASE}/memberships", headers=headers_json,
                                json={"roomId": room_id, "personEmail": email}, timeout=8)
-            if mr.status_code not in (200, 409):  # 409 = already a member
-                mr.raise_for_status()
-            elif mr.status_code == 409: # Explicitly log already a member
+            if membership_response.status_code not in (200, 409):  # 409 = already a member
+                membership_response.raise_for_status()
+            elif membership_response.status_code == 409: # Explicitly log already a member
                 app.logger.info(f"Member {email} is already in room {room_id}. (Skipped invite)")
         except requests.RequestException as e:
             app.logger.error(f"[WEBEX] Invite {email} error: {e}")
@@ -946,17 +921,18 @@ def support_create():
     # Post welcome message and capture its web URL (opens the space in the browser)
     try:
         msg = "Support space created. Open the space and click **Meet** to start the call via the web app."
-        mr = requests.post(f"{WEBEX_API_BASE}/messages", headers=headers_json,
+        message_response = requests.post(f"{WEBEX_API_BASE}/messages", headers=headers_json,
                            json={"roomId": room_id, "markdown": msg}, timeout=8)
-        mr.raise_for_status()
-        message_web_url = (mr.json() or {}).get("webUrl", "")
-        app.logger.info(f"Generated web URL for new room: {message_web_url}")
+        message_response.raise_for_status()
+
+        app.logger.info(f"Webex Response - Statut: {message_response.status_code}")
+        app.logger.info(f"Webex Response - Text: {message_response.text}")
     except requests.RequestException as e:
         app.logger.error(f"[WEBEX] Post message error: {e}")
         flash("Failed to post welcome message to the new space.", "warning")
 
-    # Redirect back with room_id (and message web URL) as query params (no storage needed)
-    return redirect(url_for("support", room_id=room_id, message_web_url=message_web_url))
+    # Redirect back with room_id (and message web URL) as query params
+    return redirect(url_for("support", room_id=room_id))
 
 # Delete room
 @app.route("/smartpedals/support/delete", methods=["POST"])
