@@ -659,14 +659,14 @@ try:
                 else:
                     # Denied: brief red flash; remain locked
                     led_red.on(); time.sleep(1); led_red.off()
-                    set_state(STATE_LOCKED)
+                    set_state(STATE_IDLE)
             elif (now() - auth_request_time) > AUTH_RESPONSE_TIMEOUT:
                 # No server response; report and stay locked
                 publish_data(client, {
                     'type': 'error', 'rack_id': DEVICE_ID,
                     'message': 'auth_timeout_unlock', 'timestamp': now()
                 })
-                set_state(STATE_LOCKED)
+                set_state(STATE_IDLE)
 
         elif state == STATE_UNLOCKING_RELAY_ON:
             # Relay ON; wait for the wheel to move far enough (bike removed)
