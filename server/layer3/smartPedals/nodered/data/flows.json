@@ -94,7 +94,7 @@
         "id": "9b84c8604e72fb7c",
         "type": "group",
         "z": "f8bc54da016b7352",
-        "name": "Stations",
+        "name": "Racks",
         "style": {
             "label": true
         },
@@ -133,7 +133,7 @@
             "060533021c7542a1"
         ],
         "x": 14,
-        "y": 1059,
+        "y": 1319,
         "w": 692,
         "h": 142
     },
@@ -151,12 +151,13 @@
             "99bad1f7329d0580",
             "e706f2e850459f30",
             "556ad038455a700f",
-            "d9b5d74366de92a0"
+            "d9b5d74366de92a0",
+            "022167b9218d3919"
         ],
         "x": 14,
-        "y": 1239,
+        "y": 1499,
         "w": 752,
-        "h": 202
+        "h": 242
     },
     {
         "id": "adf31f5d4620e8e5",
@@ -189,9 +190,36 @@
             "d32a796efc663434"
         ],
         "x": 814,
-        "y": 1239,
+        "y": 1499,
         "w": 212,
         "h": 82
+    },
+    {
+        "id": "bcf3dc375487e4e2",
+        "type": "group",
+        "z": "f8bc54da016b7352",
+        "name": "Stations",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "f256239808c4f9fd",
+            "3c68dbf81d0f40fa",
+            "b60345dda0215d77",
+            "1f871a72ac86d885",
+            "db80851c5eebe6e8",
+            "c752c37cf79aacca",
+            "ec1a7ed0cac53d63",
+            "1220b857dba2086a",
+            "7fc10829c957bfa2",
+            "4685296bb70713c6",
+            "32e900e25d38a8c8",
+            "78afc219a2f526d3"
+        ],
+        "x": 14,
+        "y": 1059,
+        "w": 1392,
+        "h": 222
     },
     {
         "id": "156e55908398abf2",
@@ -333,61 +361,6 @@
         }
     },
     {
-        "id": "859378531cff719c",
-        "type": "ui_group",
-        "name": "Racks",
-        "tab": "8c9a534e9cd32eec",
-        "order": 2,
-        "disp": true,
-        "width": "12",
-        "collapse": true,
-        "className": ""
-    },
-    {
-        "id": "0775276a207f2728",
-        "type": "ui_group",
-        "name": "Bikes",
-        "tab": "8c9a534e9cd32eec",
-        "order": 3,
-        "disp": true,
-        "width": "12",
-        "collapse": true,
-        "className": ""
-    },
-    {
-        "id": "d5fc11106263432a",
-        "type": "ui_group",
-        "name": "Users",
-        "tab": "8c9a534e9cd32eec",
-        "order": 4,
-        "disp": true,
-        "width": "12",
-        "collapse": true,
-        "className": ""
-    },
-    {
-        "id": "295d5c9fedf5a340",
-        "type": "ui_group",
-        "name": "Locations",
-        "tab": "8c9a534e9cd32eec",
-        "order": 5,
-        "disp": true,
-        "width": "12",
-        "collapse": true,
-        "className": ""
-    },
-    {
-        "id": "b652d6b0464b09a5",
-        "type": "ui_group",
-        "name": "Management",
-        "tab": "8c9a534e9cd32eec",
-        "order": 1,
-        "disp": true,
-        "width": 6,
-        "collapse": false,
-        "className": ""
-    },
-    {
         "id": "a79b94d81535af80",
         "type": "tls-config",
         "name": "",
@@ -434,79 +407,6 @@
         "sessionExpiry": ""
     },
     {
-        "id": "641b5e8937934ab6",
-        "type": "ui_group",
-        "name": "Worldmap",
-        "tab": "ec779c8f40f3048d",
-        "order": 1,
-        "disp": true,
-        "width": "24",
-        "collapse": false,
-        "className": ""
-    },
-    {
-        "id": "f25b40dd118d3511",
-        "type": "ui-base",
-        "name": "My Dashboard",
-        "path": "/dashboard",
-        "appIcon": "",
-        "includeClientData": true,
-        "acceptsClientConfig": [
-            "ui-notification",
-            "ui-control"
-        ],
-        "showPathInSidebar": false,
-        "headerContent": "page",
-        "navigationStyle": "default",
-        "titleBarStyle": "default",
-        "showReconnectNotification": true,
-        "notificationDisplayTime": 1,
-        "showDisconnectNotification": true,
-        "allowInstall": true
-    },
-    {
-        "id": "4e29b34f0cbe2f42",
-        "type": "ui-theme",
-        "name": "Default Theme",
-        "colors": {
-            "surface": "#ffffff",
-            "primary": "#0094CE",
-            "bgPage": "#eeeeee",
-            "groupBg": "#ffffff",
-            "groupOutline": "#cccccc"
-        },
-        "sizes": {
-            "density": "default",
-            "pagePadding": "12px",
-            "groupGap": "12px",
-            "groupBorderRadius": "4px",
-            "widgetGap": "12px"
-        }
-    },
-    {
-        "id": "ui_theme_1",
-        "type": "ui-theme",
-        "name": "Default Theme",
-        "colors": {
-            "surface": "#ffffff",
-            "primary": "#0094ce",
-            "bgPage": "#eeeeee",
-            "groupBg": "#ffffff",
-            "groupOutline": "#cccccc"
-        }
-    },
-    {
-        "id": "53e823d79dde1009",
-        "type": "ui_group",
-        "name": "Flask",
-        "tab": "8c9a534e9cd32eec",
-        "order": 6,
-        "disp": true,
-        "width": "12",
-        "collapse": false,
-        "className": ""
-    },
-    {
         "id": "8c9a534e9cd32eec",
         "type": "ui_tab",
         "name": "MongoDB",
@@ -523,97 +423,92 @@
         "hidden": false
     },
     {
-        "id": "ui_page_mongodb",
-        "type": "ui-page",
-        "name": "MongoDB",
-        "ui": "f25b40dd118d3511",
-        "path": "/",
-        "layout": "grid",
-        "theme": "ui_theme_1",
-        "breakpoints": [
-            {
-                "name": "Default",
-                "px": 0,
-                "cols": 3
-            },
-            {
-                "name": "Tablet",
-                "px": 576,
-                "cols": 6
-            },
-            {
-                "name": "Small Desktop",
-                "px": 768,
-                "cols": 9
-            },
-            {
-                "name": "Desktop",
-                "px": 1024,
-                "cols": 12
-            }
-        ],
-        "order": 1,
-        "visible": true,
-        "disabled": false
+        "id": "859378531cff719c",
+        "type": "ui_group",
+        "name": "Racks",
+        "tab": "8c9a534e9cd32eec",
+        "order": 4,
+        "disp": true,
+        "width": "12",
+        "collapse": true,
+        "className": ""
     },
     {
-        "id": "bfc677fe4389aa93",
-        "type": "ui-page",
-        "name": "Page 1",
-        "ui": "f25b40dd118d3511",
-        "path": "/page1",
-        "icon": "home",
-        "layout": "grid",
-        "theme": "4e29b34f0cbe2f42",
-        "breakpoints": [
-            {
-                "name": "Default",
-                "px": 0,
-                "cols": 3
-            },
-            {
-                "name": "Tablet",
-                "px": 576,
-                "cols": 6
-            },
-            {
-                "name": "Small Desktop",
-                "px": 768,
-                "cols": 9
-            },
-            {
-                "name": "Desktop",
-                "px": 1024,
-                "cols": 12
-            }
-        ],
-        "order": 2,
-        "className": "",
-        "visible": true,
-        "disabled": false
+        "id": "0775276a207f2728",
+        "type": "ui_group",
+        "name": "Bikes",
+        "tab": "8c9a534e9cd32eec",
+        "order": 3,
+        "disp": true,
+        "width": "12",
+        "collapse": true,
+        "className": ""
     },
     {
-        "id": "5e4af04f2a24ca17",
-        "type": "ui-group",
-        "name": "Group 1",
-        "page": "bfc677fe4389aa93",
-        "width": 6,
-        "height": 1,
-        "order": 1,
-        "showTitle": true,
-        "className": "",
-        "visible": true,
-        "disabled": false,
-        "groupType": "default"
-    },
-    {
-        "id": "ui_group_users",
-        "type": "ui-group",
+        "id": "d5fc11106263432a",
+        "type": "ui_group",
         "name": "Users",
-        "page": "ui_page_mongodb",
+        "tab": "8c9a534e9cd32eec",
+        "order": 2,
+        "disp": true,
+        "width": "12",
+        "collapse": true,
+        "className": ""
+    },
+    {
+        "id": "295d5c9fedf5a340",
+        "type": "ui_group",
+        "name": "Locations",
+        "tab": "8c9a534e9cd32eec",
+        "order": 6,
+        "disp": true,
+        "width": "12",
+        "collapse": true,
+        "className": ""
+    },
+    {
+        "id": "b652d6b0464b09a5",
+        "type": "ui_group",
+        "name": "Management",
+        "tab": "8c9a534e9cd32eec",
         "order": 1,
-        "visible": true,
-        "disabled": false
+        "disp": true,
+        "width": 6,
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "641b5e8937934ab6",
+        "type": "ui_group",
+        "name": "Worldmap",
+        "tab": "ec779c8f40f3048d",
+        "order": 1,
+        "disp": true,
+        "width": "24",
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "53e823d79dde1009",
+        "type": "ui_group",
+        "name": "Flask",
+        "tab": "8c9a534e9cd32eec",
+        "order": 7,
+        "disp": true,
+        "width": "12",
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "4aa0c0bce84f766b",
+        "type": "ui_group",
+        "name": "Stations",
+        "tab": "8c9a534e9cd32eec",
+        "order": 5,
+        "disp": true,
+        "width": "12",
+        "collapse": false,
+        "className": ""
     },
     {
         "id": "c3546057809c20d0",
@@ -957,7 +852,8 @@
         "wires": [
             [
                 "a79322979a25b330",
-                "af4124b1986e8913"
+                "af4124b1986e8913",
+                "b60345dda0215d77"
             ]
         ]
     },
@@ -1499,8 +1395,8 @@
                 "rows": null
             },
             {
-                "label": "Current Station",
-                "value": "currentStation",
+                "label": "Current Rack",
+                "value": "currentRack",
                 "type": "text",
                 "required": true,
                 "rows": null
@@ -1508,7 +1404,7 @@
         ],
         "formValue": {
             "bikeId": "",
-            "currentStation": ""
+            "currentRack": ""
         },
         "payload": "",
         "submit": "submit",
@@ -1586,7 +1482,7 @@
         "z": "f8bc54da016b7352",
         "g": "9b84c8604e72fb7c",
         "name": "",
-        "label": "Create Station Form",
+        "label": "Create Rack Form",
         "group": "859378531cff719c",
         "order": 5,
         "width": 0,
@@ -1598,10 +1494,18 @@
                 "type": "text",
                 "required": true,
                 "rows": null
+            },
+            {
+                "label": "Station Id",
+                "value": "stationId",
+                "type": "text",
+                "required": true,
+                "rows": null
             }
         ],
         "formValue": {
-            "rackId": ""
+            "rackId": "",
+            "stationId": ""
         },
         "payload": "",
         "submit": "submit",
@@ -1610,7 +1514,7 @@
         "topicType": "msg",
         "splitLayout": "",
         "className": "",
-        "x": 300,
+        "x": 290,
         "y": 980,
         "wires": [
             [
@@ -1742,7 +1646,7 @@
         "order": 3,
         "width": 0,
         "height": 0,
-        "format": "<div class=\"form-group\">\n    <label for=\"bikeId\">Bike Id</label>\n    <input type=\"text\" class=\"form-control\" id=\"rfid\" value=\"{{msg.payload.bikeId}}\" readonly>\n</div>",
+        "format": "<div class=\"form-group\">\n    <label for=\"bikeId\">Bike Id</label>\n    <input type=\"text\" class=\"form-control\" id=\"bikeId\" value=\"{{msg.payload.bikeId}}\" readonly>\n</div>",
         "storeOutMessages": true,
         "fwdInMessages": true,
         "resendOnRefresh": true,
@@ -1941,11 +1845,11 @@
         "z": "f8bc54da016b7352",
         "g": "9b84c8604e72fb7c",
         "group": "859378531cff719c",
-        "name": "Bike Id Read-Only",
+        "name": "Rack Id Read-Only",
         "order": 3,
         "width": 0,
         "height": 0,
-        "format": "<div class=\"form-group\">\n    <label for=\"rackId\">Rack Id</label>\n    <input type=\"text\" class=\"form-control\" id=\"rfid\" value=\"{{msg.payload.rackId}}\" readonly>\n</div>",
+        "format": "<div class=\"form-group\">\n    <label for=\"rackId\">Rack Id</label>\n    <input type=\"text\" class=\"form-control\" id=\"rackId\" value=\"{{msg.payload.rackId}}\" readonly>\n</div>",
         "storeOutMessages": true,
         "fwdInMessages": true,
         "resendOnRefresh": true,
@@ -1995,7 +1899,7 @@
         "onceDelay": 0.5,
         "topic": "",
         "x": 160,
-        "y": 1100,
+        "y": 1360,
         "wires": [
             [
                 "736c65572a9a15fe"
@@ -2020,7 +1924,7 @@
         "senderr": false,
         "headers": [],
         "x": 370,
-        "y": 1100,
+        "y": 1360,
         "wires": [
             [
                 "aa6f70d8dde6d49a",
@@ -2042,7 +1946,7 @@
         "outputs": 0,
         "cts": false,
         "x": 600,
-        "y": 1100,
+        "y": 1360,
         "wires": []
     },
     {
@@ -2060,7 +1964,7 @@
         "statusVal": "",
         "statusType": "auto",
         "x": 590,
-        "y": 1160,
+        "y": 1420,
         "wires": []
     },
     {
@@ -2085,7 +1989,7 @@
         "topic": "topic",
         "topicType": "msg",
         "x": 150,
-        "y": 1140,
+        "y": 1400,
         "wires": [
             [
                 "736c65572a9a15fe"
@@ -2100,7 +2004,7 @@
         "name": "Dashboard control",
         "events": "all",
         "x": 650,
-        "y": 1340,
+        "y": 1600,
         "wires": [
             []
         ]
@@ -2127,7 +2031,7 @@
         "topic": "topic",
         "topicType": "msg",
         "x": 120,
-        "y": 1280,
+        "y": 1540,
         "wires": [
             [
                 "d9b5d74366de92a0"
@@ -2141,7 +2045,7 @@
         "g": "d518b4f2f81a3194",
         "name": "",
         "group": "b652d6b0464b09a5",
-        "order": 1,
+        "order": 2,
         "width": 0,
         "height": 0,
         "passthru": false,
@@ -2156,7 +2060,7 @@
         "topic": "topic",
         "topicType": "msg",
         "x": 120,
-        "y": 1320,
+        "y": 1580,
         "wires": [
             [
                 "d9b5d74366de92a0"
@@ -2170,7 +2074,7 @@
         "g": "d518b4f2f81a3194",
         "name": "",
         "group": "b652d6b0464b09a5",
-        "order": 1,
+        "order": 3,
         "width": 0,
         "height": 0,
         "passthru": false,
@@ -2185,7 +2089,7 @@
         "topic": "topic",
         "topicType": "msg",
         "x": 130,
-        "y": 1360,
+        "y": 1620,
         "wires": [
             [
                 "d9b5d74366de92a0"
@@ -2199,7 +2103,7 @@
         "g": "d518b4f2f81a3194",
         "name": "",
         "group": "b652d6b0464b09a5",
-        "order": 1,
+        "order": 5,
         "width": 0,
         "height": 0,
         "passthru": false,
@@ -2214,7 +2118,7 @@
         "topic": "topic",
         "topicType": "msg",
         "x": 140,
-        "y": 1400,
+        "y": 1700,
         "wires": [
             [
                 "d9b5d74366de92a0"
@@ -2227,7 +2131,7 @@
         "z": "f8bc54da016b7352",
         "g": "d518b4f2f81a3194",
         "name": "Group Selector",
-        "func": "// Get the incoming payload (e.g., \"Users\", \"Bikes\", etc.)\nconst collectionName = msg.payload;\n\n// Define all possible groups to hide\nconst allGroups = [\"MongoDB_Users\", \"MongoDB_Bikes\", \"MongoDB_Racks\", \"MongoDB_Locations\"];\n\n// Determine which group to show\nconst groupToShow = \"MongoDB_\" + collectionName;\n\n// Filter out the group to show from the list of all groups\nconst groupsToHide = allGroups.filter(group => group !== groupToShow);\n\n// Create the new payload\nmsg.payload = {\n    \"group\": {\n        \"show\": [groupToShow],\n        \"hide\": groupsToHide\n    }\n};\n\nreturn msg;",
+        "func": "// Get the incoming payload (e.g., \"Users\", \"Bikes\", etc.)\nconst collectionName = msg.payload;\n\n// Define all possible groups to hide\nconst allGroups = [\"MongoDB_Users\", \"MongoDB_Bikes\", \"MongoDB_Racks\", \"MongoDB_Stations\", \"MongoDB_Locations\"];\n\n// Determine which group to show\nconst groupToShow = \"MongoDB_\" + collectionName;\n\n// Filter out the group to show from the list of all groups\nconst groupsToHide = allGroups.filter(group => group !== groupToShow);\n\n// Create the new payload\nmsg.payload = {\n    \"group\": {\n        \"show\": [groupToShow],\n        \"hide\": groupsToHide\n    }\n};\n\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
@@ -2235,7 +2139,7 @@
         "finalize": "",
         "libs": [],
         "x": 380,
-        "y": 1340,
+        "y": 1600,
         "wires": [
             [
                 "ui_ctrl_sink"
@@ -2478,9 +2382,391 @@
         "templateScope": "local",
         "className": "",
         "x": 920,
-        "y": 1280,
+        "y": 1540,
         "wires": [
             []
+        ]
+    },
+    {
+        "id": "3c68dbf81d0f40fa",
+        "type": "inject",
+        "z": "f8bc54da016b7352",
+        "g": "bcf3dc375487e4e2",
+        "name": "Refresh Station List",
+        "props": [],
+        "repeat": "60",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.5,
+        "topic": "",
+        "x": 160,
+        "y": 1100,
+        "wires": [
+            [
+                "b60345dda0215d77"
+            ]
+        ]
+    },
+    {
+        "id": "b60345dda0215d77",
+        "type": "http request",
+        "z": "f8bc54da016b7352",
+        "g": "bcf3dc375487e4e2",
+        "name": "GET Stations",
+        "method": "GET",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "https://hepl.local/smartpedals/api/stations",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 350,
+        "y": 1100,
+        "wires": [
+            [
+                "1f871a72ac86d885",
+                "1220b857dba2086a"
+            ]
+        ]
+    },
+    {
+        "id": "1f871a72ac86d885",
+        "type": "ui_table",
+        "z": "f8bc54da016b7352",
+        "g": "bcf3dc375487e4e2",
+        "group": "4aa0c0bce84f766b",
+        "name": "Station Table",
+        "order": 4,
+        "width": "12",
+        "height": "4",
+        "columns": [
+            {
+                "field": "stationId",
+                "title": "Station Id",
+                "width": "",
+                "align": "left",
+                "formatter": "plaintext",
+                "formatterParams": {
+                    "target": "_blank"
+                }
+            },
+            {
+                "field": "name",
+                "title": "Name",
+                "width": "",
+                "align": "left",
+                "formatter": "plaintext",
+                "formatterParams": {
+                    "target": "_blank"
+                }
+            },
+            {
+                "field": "racks",
+                "title": "Racks",
+                "width": "",
+                "align": "left",
+                "formatter": "plaintext",
+                "formatterParams": {
+                    "target": "_blank"
+                }
+            },
+            {
+                "field": "id",
+                "title": "MongoID",
+                "width": "",
+                "align": "left",
+                "formatter": "plaintext",
+                "formatterParams": {
+                    "target": "_blank"
+                }
+            }
+        ],
+        "outputs": 1,
+        "cts": true,
+        "x": 590,
+        "y": 1100,
+        "wires": [
+            [
+                "7fc10829c957bfa2"
+            ]
+        ]
+    },
+    {
+        "id": "db80851c5eebe6e8",
+        "type": "ui_form",
+        "z": "f8bc54da016b7352",
+        "g": "bcf3dc375487e4e2",
+        "name": "",
+        "label": "Create Station Form",
+        "group": "4aa0c0bce84f766b",
+        "order": 5,
+        "width": 0,
+        "height": 0,
+        "options": [
+            {
+                "label": "Station Id",
+                "value": "stationId",
+                "type": "text",
+                "required": true,
+                "rows": null
+            },
+            {
+                "label": "Name",
+                "value": "name",
+                "type": "text",
+                "required": false,
+                "rows": null
+            }
+        ],
+        "formValue": {
+            "stationId": "",
+            "name": ""
+        },
+        "payload": "",
+        "submit": "submit",
+        "cancel": "cancel",
+        "topic": "topic",
+        "topicType": "msg",
+        "splitLayout": "",
+        "className": "",
+        "x": 300,
+        "y": 1240,
+        "wires": [
+            [
+                "ec1a7ed0cac53d63"
+            ]
+        ]
+    },
+    {
+        "id": "c752c37cf79aacca",
+        "type": "ui_button",
+        "z": "f8bc54da016b7352",
+        "g": "bcf3dc375487e4e2",
+        "name": "",
+        "group": "4aa0c0bce84f766b",
+        "order": 1,
+        "width": "6",
+        "height": "1",
+        "passthru": true,
+        "label": "Reload Stations",
+        "tooltip": "",
+        "color": "",
+        "bgcolor": "",
+        "className": "",
+        "icon": "",
+        "payload": "",
+        "payloadType": "str",
+        "topic": "topic",
+        "topicType": "msg",
+        "x": 140,
+        "y": 1140,
+        "wires": [
+            [
+                "b60345dda0215d77"
+            ]
+        ]
+    },
+    {
+        "id": "ec1a7ed0cac53d63",
+        "type": "http request",
+        "z": "f8bc54da016b7352",
+        "g": "bcf3dc375487e4e2",
+        "name": "POST Station",
+        "method": "POST",
+        "ret": "txt",
+        "paytoqs": "ignore",
+        "url": "https://hepl.local/smartpedals/api/stations",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 500,
+        "y": 1240,
+        "wires": [
+            [
+                "b60345dda0215d77"
+            ]
+        ]
+    },
+    {
+        "id": "1220b857dba2086a",
+        "type": "debug",
+        "z": "f8bc54da016b7352",
+        "g": "bcf3dc375487e4e2",
+        "name": "List stations",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 590,
+        "y": 1160,
+        "wires": []
+    },
+    {
+        "id": "7fc10829c957bfa2",
+        "type": "change",
+        "z": "f8bc54da016b7352",
+        "g": "bcf3dc375487e4e2",
+        "name": "",
+        "rules": [
+            {
+                "t": "set",
+                "p": "selected_stationId",
+                "pt": "flow",
+                "to": "payload.stationId",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 870,
+        "y": 1140,
+        "wires": [
+            [
+                "32e900e25d38a8c8",
+                "4685296bb70713c6"
+            ]
+        ]
+    },
+    {
+        "id": "4685296bb70713c6",
+        "type": "ui_button",
+        "z": "f8bc54da016b7352",
+        "g": "bcf3dc375487e4e2",
+        "name": "",
+        "group": "4aa0c0bce84f766b",
+        "order": 2,
+        "width": "6",
+        "height": "1",
+        "passthru": false,
+        "label": "Delete Selected",
+        "tooltip": "",
+        "color": "",
+        "bgcolor": "red",
+        "className": "",
+        "icon": "",
+        "payload": "",
+        "payloadType": "str",
+        "topic": "topic",
+        "topicType": "msg",
+        "x": 840,
+        "y": 1240,
+        "wires": [
+            [
+                "78afc219a2f526d3"
+            ]
+        ]
+    },
+    {
+        "id": "32e900e25d38a8c8",
+        "type": "ui_template",
+        "z": "f8bc54da016b7352",
+        "g": "bcf3dc375487e4e2",
+        "group": "4aa0c0bce84f766b",
+        "name": "Station Id Read-Only",
+        "order": 3,
+        "width": 0,
+        "height": 0,
+        "format": "<div class=\"form-group\">\n    <label for=\"stationId\">Station Id</label>\n    <input type=\"text\" class=\"form-control\" id=\"stationId\" value=\"{{msg.payload.stationId}}\" readonly>\n</div>",
+        "storeOutMessages": true,
+        "fwdInMessages": true,
+        "resendOnRefresh": true,
+        "templateScope": "local",
+        "className": "",
+        "x": 1120,
+        "y": 1160,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "78afc219a2f526d3",
+        "type": "function",
+        "z": "f8bc54da016b7352",
+        "g": "bcf3dc375487e4e2",
+        "name": "Parse URL",
+        "func": "var stationId = flow.get(\"selected_stationId\");\nif (stationId) {\n    msg.url = \"https://hepl.local/smartpedals/api/stations/\" + stationId;\n} else {\n    return null;\n}\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1070,
+        "y": 1240,
+        "wires": [
+            [
+                "f256239808c4f9fd"
+            ]
+        ]
+    },
+    {
+        "id": "f256239808c4f9fd",
+        "type": "http request",
+        "z": "f8bc54da016b7352",
+        "g": "bcf3dc375487e4e2",
+        "name": "DELETE Station",
+        "method": "DELETE",
+        "ret": "txt",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 1300,
+        "y": 1240,
+        "wires": [
+            [
+                "b60345dda0215d77",
+                "5f58f34948838bea"
+            ]
+        ]
+    },
+    {
+        "id": "022167b9218d3919",
+        "type": "ui_button",
+        "z": "f8bc54da016b7352",
+        "g": "d518b4f2f81a3194",
+        "name": "",
+        "group": "b652d6b0464b09a5",
+        "order": 4,
+        "width": 0,
+        "height": 0,
+        "passthru": false,
+        "label": "Stations Collection",
+        "tooltip": "",
+        "color": "",
+        "bgcolor": "",
+        "className": "",
+        "icon": "",
+        "payload": "Stations",
+        "payloadType": "str",
+        "topic": "topic",
+        "topicType": "msg",
+        "x": 130,
+        "y": 1660,
+        "wires": [
+            [
+                "d9b5d74366de92a0"
+            ]
         ]
     },
     {
