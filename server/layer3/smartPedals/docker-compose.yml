@@ -33,6 +33,25 @@ services:
       - ./nodered/data:/data
       - ./nodered/certs:/certs:ro
 
+  mongodb:
+    image: mongo:7
+    container_name: mongodb
+    user: "1000:1000"
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=administrator
+      - MONGO_INITDB_ROOT_PASSWORD=Administrator
+      - MONGO_INITDB_DATABASE=hepl
+    restart: unless-stopped
+    volumes:
+      - ./mongodb/data:/data/db
+      - ./mongodb/configdb:/data/configdb
+      - ./mongodb/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+    networks:
+      - default
+      - management_caddy_network
+
 networks:
   management_caddy_network:
     external: true

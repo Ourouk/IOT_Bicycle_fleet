@@ -707,5 +707,25 @@
                 "file": "/data/node_modules/node-red-node-ui-table/node.js"
             }
         }
+    },
+    "node-red-contrib-mongodb4": {
+        "name": "node-red-contrib-mongodb4",
+        "version": "3.1.1",
+        "local": true,
+        "user": true,
+        "nodes": {
+            "mongodb4": {
+                "name": "mongodb4",
+                "types": [
+                    "mongodb4-client",
+                    "mongodb4"
+                ],
+                "enabled": true,
+                "local": true,
+                "user": false,
+                "module": "node-red-contrib-mongodb4",
+                "file": "/data/node_modules/node-red-contrib-mongodb4/src/mongodb4.js"
+            }
+        }
     }
 }

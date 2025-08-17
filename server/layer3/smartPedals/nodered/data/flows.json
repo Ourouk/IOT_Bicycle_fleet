@@ -264,6 +264,29 @@
         "h": 122
     },
     {
+        "id": "878b3cf3372730d2",
+        "type": "group",
+        "z": "f8bc54da016b7352",
+        "name": "smartpedalsDB",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "3c0e30964d42fa39",
+            "49ec62c9a9d4178f",
+            "59c5426826805894",
+            "85d8d00ea438e9dd",
+            "49c8d86960664c3e",
+            "fc3ab5a1626e039d",
+            "a09bef8673514ebd",
+            "231464231b7cfc75"
+        ],
+        "x": 1454,
+        "y": 1019,
+        "w": 772,
+        "h": 262
+    },
+    {
         "id": "5a1477eb81ac255d",
         "type": "ui_base",
         "theme": {
@@ -509,6 +532,30 @@
         "width": "12",
         "collapse": false,
         "className": ""
+    },
+    {
+        "id": "07d25dd24d403912",
+        "type": "mongodb4-client",
+        "name": "",
+        "protocol": "mongodb",
+        "hostname": "mongodb",
+        "port": "27017",
+        "dbName": "hepl",
+        "appName": "",
+        "authSource": "admin",
+        "authMechanism": "DEFAULT",
+        "tls": false,
+        "tlsCAFile": "",
+        "tlsCertificateKeyFile": "",
+        "tlsInsecure": false,
+        "connectTimeoutMS": "30000",
+        "socketTimeoutMS": "0",
+        "minPoolSize": "0",
+        "maxPoolSize": "100",
+        "maxIdleTimeMS": "0",
+        "uri": "",
+        "advanced": "{}",
+        "uriTabActive": "tab-uri-simple"
     },
     {
         "id": "c3546057809c20d0",
@@ -853,7 +900,8 @@
             [
                 "a79322979a25b330",
                 "af4124b1986e8913",
-                "b60345dda0215d77"
+                "b60345dda0215d77",
+                "49c8d86960664c3e"
             ]
         ]
     },
@@ -2760,6 +2808,226 @@
         "wires": [
             [
                 "d9b5d74366de92a0"
+            ]
+        ]
+    },
+    {
+        "id": "49ec62c9a9d4178f",
+        "type": "mongodb4",
+        "z": "f8bc54da016b7352",
+        "g": "878b3cf3372730d2",
+        "clientNode": "07d25dd24d403912",
+        "mode": "collection",
+        "collection": "logs",
+        "operation": "insertOne",
+        "output": "toArray",
+        "maxTimeMS": "0",
+        "handleDocId": false,
+        "name": "insert bikes per station",
+        "x": 2000,
+        "y": 1200,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "3c0e30964d42fa39",
+        "type": "function",
+        "z": "f8bc54da016b7352",
+        "g": "878b3cf3372730d2",
+        "name": "bikes availability",
+        "func": "const racks = Array.isArray(msg.payload) ? msg.payload : [];\n\n// Per station\nconst byStation = {};\nfor (const r of racks) {\n  const st = r?.station_id ?? \"unknown\";\n  if (!byStation[st]) byStation[st] = { station_id: st, total: 0, occupied: 0 };\n  byStation[st].total += 1;\n  if (r?.currentBike) byStation[st].occupied += 1; // occupied if there is a bike\n}\n\n// Timestamp\nconst ts = new Date(); // timestamp ISO\nconst tz = \"Europe/Brussels\";\n// (ex: \"17/08/2025, 16:45:05\")\nconst ts_brussels = ts.toLocaleString(\"fr-BE\", { timeZone: tz });\n\nconst docs = Object.values(byStation).map(s => ({\n  ts,\n  ts_brussels,\n  station_id: s.station_id,\n  total_racks: s.total,\n  occupied: s.occupied,\n  available: s.total - s.occupied\n}));\n\n// if db is empty (after a cleanup for example) -> bypass the rest\nif (msg.dbEmpty === true) {\n  const baseline = {}; // init for the next diff\n  for (const d of docs) {\n    const k = String(d.station_id ?? \"unknown\");\n    baseline[k] = {\n      available: d.available,\n      occupied: d.occupied,\n      total_racks: d.total_racks\n    };\n  }\n  flow.set(\"last_state_by_station\", baseline);\n\n  msg.payload = { documents: docs };  // send full info\n  return msg;\n}\n\n// Check changes per station\n// Keep last state in flow context\nconst prev = flow.get(\"last_state_by_station\") || {}; // { [station_id]: {available, occupied, total_racks} }\nconst next = { ...prev };\n\nconst changed = [];\nfor (const d of docs) {\n  const k = String(d.station_id ?? \"unknown\");\n  const last = prev[k];\n\n  // No change if available & occupied are identical.\n  const same =\n    last &&\n    last.available === d.available &&\n    last.occupied === d.occupied;\n\n  if (!same) {\n    changed.push(d);\n    next[k] = {\n      available: d.available,\n      occupied: d.occupied,\n      total_racks: d.total_racks\n    };\n  }\n}\n\n// Save latest state\nflow.set(\"last_state_by_station\", next);\n\n// If nothing changed, stop\nif (changed.length === 0) {\n  return;\n}\n\n// Otherwise, only send the changed stations\n//msg.payload = { documents: docs };\nmsg.payload = { documents: changed };\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1680,
+        "y": 1200,
+        "wires": [
+            [
+                "49ec62c9a9d4178f",
+                "59c5426826805894"
+            ]
+        ]
+    },
+    {
+        "id": "59c5426826805894",
+        "type": "debug",
+        "z": "f8bc54da016b7352",
+        "g": "878b3cf3372730d2",
+        "name": "debug 2",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1840,
+        "y": 1240,
+        "wires": []
+    },
+    {
+        "id": "85d8d00ea438e9dd",
+        "type": "mongodb4",
+        "z": "f8bc54da016b7352",
+        "g": "878b3cf3372730d2",
+        "clientNode": "07d25dd24d403912",
+        "mode": "collection",
+        "collection": "logs",
+        "operation": "estimatedDocumentCount",
+        "output": "forEach",
+        "maxTimeMS": "0",
+        "handleDocId": false,
+        "name": "detect if empty",
+        "x": 1760,
+        "y": 1080,
+        "wires": [
+            [
+                "fc3ab5a1626e039d",
+                "59c5426826805894"
+            ]
+        ]
+    },
+    {
+        "id": "49c8d86960664c3e",
+        "type": "change",
+        "z": "f8bc54da016b7352",
+        "g": "878b3cf3372730d2",
+        "name": "",
+        "rules": [
+            {
+                "t": "set",
+                "p": "racks",
+                "pt": "msg",
+                "to": "payload",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 1560,
+        "y": 1080,
+        "wires": [
+            [
+                "85d8d00ea438e9dd"
+            ]
+        ]
+    },
+    {
+        "id": "fc3ab5a1626e039d",
+        "type": "switch",
+        "z": "f8bc54da016b7352",
+        "g": "878b3cf3372730d2",
+        "name": "",
+        "property": "payload",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "eq",
+                "v": "0",
+                "vt": "num"
+            },
+            {
+                "t": "else"
+            }
+        ],
+        "checkall": "true",
+        "repair": false,
+        "outputs": 2,
+        "x": 1930,
+        "y": 1080,
+        "wires": [
+            [
+                "a09bef8673514ebd"
+            ],
+            [
+                "231464231b7cfc75"
+            ]
+        ]
+    },
+    {
+        "id": "a09bef8673514ebd",
+        "type": "change",
+        "z": "f8bc54da016b7352",
+        "g": "878b3cf3372730d2",
+        "name": "db is empty",
+        "rules": [
+            {
+                "t": "set",
+                "p": "dbEmpty",
+                "pt": "msg",
+                "to": "true",
+                "tot": "bool"
+            },
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "racks",
+                "tot": "msg"
+            },
+            {
+                "t": "delete",
+                "p": "racks",
+                "pt": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 2110,
+        "y": 1060,
+        "wires": [
+            [
+                "3c0e30964d42fa39"
+            ]
+        ]
+    },
+    {
+        "id": "231464231b7cfc75",
+        "type": "change",
+        "z": "f8bc54da016b7352",
+        "g": "878b3cf3372730d2",
+        "name": "db is not empty",
+        "rules": [
+            {
+                "t": "set",
+                "p": "dbEmpty",
+                "pt": "msg",
+                "to": "false",
+                "tot": "bool"
+            },
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "racks",
+                "tot": "msg"
+            },
+            {
+                "t": "delete",
+                "p": "racks",
+                "pt": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 2120,
+        "y": 1100,
+        "wires": [
+            [
+                "3c0e30964d42fa39"
             ]
         ]
     },

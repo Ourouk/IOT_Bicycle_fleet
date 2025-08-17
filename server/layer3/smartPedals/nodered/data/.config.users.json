@@ -36,6 +36,9 @@
                     "pretty": true,
                     "json-view": false
                 }
+            },
+            "keymap": {
+                "core:show-action-list": null
             }
         },
         "menu-menu-item-palette": true
