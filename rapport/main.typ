@@ -50,7 +50,7 @@ Les deux serveurs seraient basés sur Rocky Linux en utilisant une architecture 
 
 == Diagramme
 #set page(flipped: true, margin: 2.5%)
-#figure(image("figures/IOT.png",width: 100%),)
+#figure(image("figures/IOT.jpg",width: 100%),)
 
 #set page(flipped: false,
     margin:  (x: 3cm, top: 2cm, bottom: 2cm),header-ascent: 35%,
