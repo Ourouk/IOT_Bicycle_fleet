@@ -63,14 +63,19 @@ ZERO_ALERT_SECONDS = int(os.environ.get("ZERO_ALERT_SECONDS", 15 * 60)) # Send m
 # Webex
 WEBEX_API_BASE = os.environ.get("WEBEX_API_BASE", "https://webexapis.com/v1")
 WEBEX_ACCESS_TOKEN = os.environ.get("WEBEX_ACCESS_TOKEN", "")
-SUPPORT_DEFAULT_TITLE = os.environ.get("SUPPORT_DEFAULT_TITLE", "Support – HEPL")
+SUPPORT_DEFAULT_TITLE = os.environ.get("SUPPORT_DEFAULT_TITLE", "Support - HEPL")
+
+# Shodan
+SHODAN_API_BASE = os.environ.get("SHODAN_API_BASE", "https://api.shodan.io")
+SHODAN_API_KEY = os.environ.get("SHODAN_API_KEY", "")
 
 # SSE (Server-Sent Events)
 events_listeners = []
-LISTENER_QUEUE_SIZE = 1
+LISTENER_QUEUE_SIZE = 10
 
 # Other
 BRUSSELS = ZoneInfo("Europe/Brussels")
+AUTH_MAX_SKEW_SECONDS = int(os.environ.get("AUTH_MAX_SKEW_SECONDS", "120"))
 # External topic cache
 latest_disponibilities = None
 latest_disponibilities_count = None
@@ -146,140 +151,173 @@ def insert_to_mongo(topic, payload):
     except Exception as e:
         print(f"[MQTT] Error during insert: {e}")
 
-# Auth message handler
+# Handle authentication messages
 def handle_auth_message(mqtt_client_instance, payload):
-    now = datetime.now(BRUSSELS)
     reply_topic = "hepl/auth_reply"
+    now = datetime.now(BRUSSELS)
+    now_iso = now.isoformat(timespec="seconds")
+
+    def send_deny(reason=None):
+        reply = {
+            "user_id": user_id,
+            "action": action,
+            "rack_id": rack_id,
+            "timestamp": now_iso,
+            "type": "auth_response",
+            "station_id": station_id if 'station_id' in locals() else None,
+            "reply": "deny"
+        }
+        mqtt_client_instance.publish(reply_topic, json.dumps(reply), qos=2, retain=False)
+        if reason:
+            app.logger.info(f"[AUTH] {reason} → deny")
+
     try:
         data = json.loads(payload)
         user_id = data.get("user_id")
         bike_id = data.get("bike_id")
         rack_id = data.get("rack_id")
-        action = data.get("action")
+        action  = data.get("type") or data.get("action")
+        ts_str  = data.get("timestamp")
 
-        if not all([user_id, bike_id, action]):
-            print("[MQTT] Invalid auth message format.")
-            # Send Deny if smth is missing
-            reply = {
-                "bike_id": bike_id,
-                "type": "auth_reply",
-                "action": "deny",
-                "user_id": user_id,
-                "timestamp": now.isoformat()
-            }
-            mqtt_client_instance.publish(reply_topic, json.dumps(reply))
-            return
+        # Check if all required fields are present
+        if not all([user_id, bike_id, rack_id, action, ts_str]):
+            return send_deny("Missing fields")
 
-        # Check for the user_id in the users collection
-        user = users_col.find_one({"rfid": user_id})
+        # Check user
+        user = users_col.find_one({"rfid": str(user_id)})
         if not user:
-            print(f"[MQTT] User with rfid '{user_id}' not found. Denying request.")
-            reply = {
-                "bike_id": bike_id,
-                "type": "auth_reply",
-                "action": "deny",
-                "user_id": user_id,
-                "timestamp": now.isoformat()
-            }
-            mqtt_client_instance.publish(reply_topic, json.dumps(reply))
-            return
+            return send_deny(f"Unknown user {user_id}")
 
-        # Check for the bike
-        bike = bikes_col.find_one({"bikeId": bike_id})
-        if not bike:
-            print(f"[MQTT] Bike with ID '{bike_id}' not found. Denying request.")
-            reply = {
-                "bike_id": bike_id,
-                "type": "auth_reply",
-                "action": "deny",
-                "user_id": user_id,
-                "timestamp": now.isoformat()
-            }
-            mqtt_client_instance.publish(reply_topic, json.dumps(reply))
-            return
+        # Check bike
+        bike_doc = bikes_col.find_one({"bike_id": str(bike_id)})
+        if not bike_doc:
+            return send_deny(f"No bike found in rack {rack_id}")
 
-        # Reply
-        reply_action = "deny"
+        # Check timestamp
+        try:
+            ts_msg = datetime.fromisoformat(str(ts_str))
+            if ts_msg.tzinfo is None:
+                ts_msg = ts_msg.replace(tzinfo=BRUSSELS)
+            skew = abs((now - ts_msg).total_seconds())
+        except Exception:
+            return send_deny(f"Invalid timestamp format {ts_str}")
 
+        if skew > AUTH_MAX_SKEW_SECONDS:
+            return send_deny(f"Timestamp skew too large ({skew:.1f}s)")
+
+        # Get rack and station_id for the reply
+        rack_doc = racks_col.find_one({"rack_id": str(rack_id)})
+        station_id = str(rack_doc.get("station_id")) if rack_doc else None
+
+        # Action: unlock
         if action == "unlock":
-            # Check the bike status (need to be available)
-            if bike.get("status") == "available" and not bike.get("currentUser"):
-                # Mettre à jour l'état du vélo et de l'utilisateur
+            update_bike = bikes_col.update_one(
+                {"bike_id": str(bike_id), "status": "available", "currentRack": str(rack_id)},
+                {"$set": {"status": "in_use", "currentUser": str(user_id), "currentRack": None},
+                "$push": {"history": {"action": "unlock", "user_id": str(user_id), "timestamp": now}}}
+            )
+            if update_bike.modified_count == 0:
+                return send_deny(f"Unlock denied for user={user_id} bike={bike_id} rack={rack_id}")
+
+            update_rack = racks_col.update_one(
+                {"rack_id": str(rack_id), "currentBike": str(bike_id)},
+                {"$set": {"currentBike": None},
+                "$push": {"history": {"bike_id": str(bike_id), "action": "unlock", "timestamp": now}}}
+            )
+            if update_rack.modified_count == 0:
                 bikes_col.update_one(
-                    {"bikeId": bike_id},
-                    {"$set": {"status": "in_use", "currentUser": user_id, "currentRack": None},
-                     "$push": {"history": {"action": "undock", "userRfid": user_id, "timestamp": now}}}
+                    {"bike_id": str(bike_id), "status": "in_use", "currentUser": str(user_id), "currentRack": None},
+                    {"$set": {"status": "available", "currentUser": None, "currentRack": str(rack_id)},
+                    "$push": {"history": {"action": "unlock_rollback", "user_id": str(user_id), "timestamp": now}}}
                 )
-                users_col.update_one(
-                    {"rfid": user_id},
-                    {"$push": {"history": {"bikeId": bike_id, "action": "undock", "timestamp": now}}}
-                )
+                return send_deny(f"Rack update failed for rack={rack_id} bike={bike_id} [rollback ok]")
 
-                # Update racks
-                # if bike.get("currentRack"):
-                #     racks_col.update_one(
-                #         {"rackId": bike["currentRack"]},
-                #         {"$set": {"currentBike": None},
-                #          "$push": {"history": {"bikeId": bike_id, "action": "undock", "timestamp": now}}}
-                #     )
-                reply_action = "accept"
-                print(f"[MQTT] Unlock request accepted for bike '{bike_id}' by user '{user_id}'.")
-            else:
-                print(f"[MQTT] Unlock request denied for bike '{bike_id}' (not available).")
+            users_col.update_one(
+                {"rfid": str(user_id)},
+                {"$push": {"history": {"bike_id": str(bike_id), "action": "unlock", "timestamp": now}}}
+            )
+            reply = {
+                "user_id": user_id,
+                "action": action,
+                "rack_id": rack_id,
+                "timestamp": now_iso,
+                "type": "auth_response",
+                "station_id": station_id,
+                "reply": "accept"
+            }
+            mqtt_client_instance.publish(reply_topic, json.dumps(reply), qos=2, retain=False)
+            app.logger.info(f"[AUTH] Unlock accepted for user={user_id} bike={bike_id} rack={rack_id}")
+            publish_ping()
+            return
 
-        elif action == "lock":
-            # Check the bike status (is used by the requested user?)
-            if bike.get("status") == "in_use" and bike.get("currentUser") == user_id:
-                # Update bikes and users collection
+        # Action: lock
+        if action == "lock":
+            update_bike = bikes_col.update_one(
+                {"bike_id": str(bike_id), "status": "in_use", "currentUser": str(user_id)},
+                {"$set": {"status": "available", "currentUser": None, "currentRack": str(rack_id)},
+                "$push": {"history": {"action": "lock", "user_id": str(user_id), "timestamp": now}}}
+            )
+            if update_bike.modified_count == 0:
+                return send_deny(f"Lock denied for user={user_id} bike={bike_id} (not in use by this user)")
+
+            update_rack = racks_col.update_one(
+                {"rack_id": str(rack_id), "currentBike": None},
+                {"$set": {"currentBike": str(bike_id)},
+                "$push": {"history": {"bike_id": str(bike_id), "action": "lock", "timestamp": now}}}
+            )
+            if update_rack.modified_count == 0:
                 bikes_col.update_one(
-                    {"bikeId": bike_id},
-                    {"$set": {"status": "available", "currentUser": None},
-                     "$push": {"history": {"action": "dock", "userRfid": user_id, "timestamp": now}}}
+                    {"bike_id": str(bike_id), "status": "available", "currentUser": None, "currentRack": str(rack_id)},
+                    {"$set": {"status": "in_use", "currentUser": str(user_id), "currentRack": None},
+                    "$push": {"history": {"action": "lock_rollback", "user_id": str(user_id), "timestamp": now}}}
                 )
-                users_col.update_one(
-                    {"rfid": user_id},
-                    {"$push": {"history": {"bikeId": bike_id, "action": "dock", "timestamp": now}}}
-                )
-                reply_action = "accept"
-                print(f"[MQTT] Lock request accepted for bike '{bike_id}' by user '{user_id}'.")
-            else:
-                print(f"[MQTT] Lock request denied for bike '{bike_id}' (not in use by this user).")
+                return send_deny(f"Rack busy/missing for rack={rack_id} bike={bike_id} [rollback ok]")
 
-        # Publish in topic `hepl/auth_reply`
-        reply = {
-            "bike_id": bike_id,
-            "rack_id": rack_id,
-            "type": "auth_reply",
-            "action": reply_action,
-            "user_id": user_id,
-            "timestamp": now.isoformat()
-        }
-        mqtt_client_instance.publish(reply_topic, json.dumps(reply))
+            users_col.update_one(
+                {"rfid": str(user_id)},
+                {"$push": {"history": {"bike_id": str(bike_id), "action": "lock", "timestamp": now}}}
+            )
+            reply = {
+                "user_id": user_id,
+                "action": action,
+                "rack_id": rack_id,
+                "timestamp": now_iso,
+                "type": "auth_response",
+                "station_id": station_id,
+                "reply": "accept"
+            }
+            mqtt_client_instance.publish(reply_topic, json.dumps(reply), qos=2, retain=False)
+            app.logger.info(f"[AUTH] Lock accepted for user={user_id} bike={bike_id} rack={rack_id}")
+            publish_ping()
+            return
 
-        # Update SSE
-        publish_ping()
+        # Unknown action
+        return send_deny(f"Unknown action '{action}'")
 
-    except json.JSONDecodeError:
-        print("[MQTT] Error decoding JSON payload for auth message.")
     except Exception as e:
-        print(f"[MQTT] Error handling auth message: {e}")
-        reply = {
-            "bike_id": data.get("bike_id"),
-            "type": "auth_reply",
-            "action": "deny",
-            "user_id": data.get("user_id"),
-            "timestamp": now.isoformat()
-        }
-        mqtt_client_instance.publish(reply_topic, json.dumps(reply))
+        app.logger.info(f"[AUTH] Error: {e}")
+        try:
+            reply = {
+                "user_id": data.get("user_id") if isinstance(data, dict) else None,
+                "action": (data.get("type") or data.get("action")) if isinstance(data, dict) else None,
+                "rack_id": data.get("rack_id") if isinstance(data, dict) else None,
+                "timestamp": now_iso,
+                "type": "auth_response",
+                "station_id": None,
+                "reply": "deny"
+            }
+            mqtt_client_instance.publish(reply_topic, json.dumps(reply), qos=2, retain=False)
+        except Exception:
+            pass
 
 # MQTT local (secured)
 def on_connect(client, userdata, flags, rc):
     print(f"Connected with result code {rc}")
     #client.subscribe("sensors/#")
     client.subscribe("hepl/#")
-    client.subscribe("hepl/auth")
-    client.subscribe("hepl/location")
-    client.subscribe("hepl/parked") # bikeId rackId stationId
+    client.subscribe("hepl/auth", qos=2)  # auth messages
+    client.subscribe("hepl/location")  # location messages
+    client.subscribe("hepl/parked", qos=2) # bike_id rack_id station_id
 
 def on_message(client, userdata, msg):
     try:
@@ -288,6 +326,17 @@ def on_message(client, userdata, msg):
         # Authentification
         if msg.topic == "hepl/auth":
             handle_auth_message(client, payload)
+            insert_to_mongo(msg.topic, payload)
+        elif msg.topic == "hepl/location":
+            try:
+                data = json.loads(payload)
+                data["timestamp"] = datetime.now(BRUSSELS)
+                locations_col.insert_one(data)
+                print(f"[MQTT] Location data inserted into database")
+            except json.JSONDecodeError:
+                print("[MQTT] Error decoding JSON payload for location message")
+            except Exception as e:
+                print(f"[MQTT] Error inserting location data: {e}")
             insert_to_mongo(msg.topic, payload)
         else:
             insert_to_mongo(msg.topic, payload)
@@ -351,16 +400,21 @@ def handle_disponibility_alerts(count: int):
     If count > 0 and a "no bikes" SMS was sent, send one "available again" SMS.
     If zero resolves before 15 min, send nothing at all.
     """
+    # init global variables to track state
     global zero_since_ts, zero_alert_sent
     t = time.time()
 
+    # If count is 0, check if we need to send an alert
     if count == 0:
         if zero_since_ts is None:
             zero_since_ts = t
+        # If we have not sent an alert yet and the time since zero_since_ts is >= ZERO_ALERT_SECONDS
         if (not zero_alert_sent) and (t - zero_since_ts) >= ZERO_ALERT_SECONDS:
+            # Send alert
             if twilio_send_sms(f"No bikes available for {ZERO_ALERT_SECONDS // 60} minutes!"):
                 zero_alert_sent = True
     else:
+        # If count > 0 and we had sent a zero alert, send an "available again" SMS
         if zero_alert_sent:
             twilio_send_sms(f"Bikes available again: {count}.")
         # reset in all cases when count > 0
@@ -491,7 +545,7 @@ def list_bikes():
     for d in docs:
         bikes.append({
             "id": str(d["_id"]),
-            "bikeId": d.get("bikeId"),
+            "bike_id": d.get("bike_id"),
             "status": d.get("status"),
             "currentUser": d.get("currentUser"),
             "currentRack": d.get("currentRack"),
@@ -501,12 +555,12 @@ def list_bikes():
 
 @app.route("/smartpedals/api/bikes/<string:bike_id>", methods=["GET"])
 def get_bike(bike_id):
-    d = bikes_col.find_one({"bikeId": bike_id})
+    d = bikes_col.find_one({"bike_id": bike_id})
     if not d:
         return jsonify({"status": "not_found"}), 404
     bike = {
         "id": str(d["_id"]),
-        "bikeId": d.get("bikeId"),
+        "bike_id": d.get("bike_id"),
         "status": d.get("status"),
         "currentUser": d.get("currentUser"),
         "currentRack": d.get("currentRack"),
@@ -525,7 +579,7 @@ def create_bike():
     rack_id = bike_data.get("currentRack")
     now = datetime.now(BRUSSELS)
     if rack_id:
-        rack = racks_col.find_one({"rackId": rack_id})
+        rack = racks_col.find_one({"rack_id": rack_id})
         if not rack:
             return jsonify({"status": "error", "message": f"Rack '{rack_id}' not found"}), 400
         if rack.get("currentBike") is not None:
@@ -535,8 +589,8 @@ def create_bike():
 
         # Mark that rack as now this bike
         if rack_id:
-            racks_col.update_one({"rackId": rack_id}, {"$set": {"currentBike": bike_data["bikeId"]}, "$push": {"history": {
-                "bikeId": bike_data["bikeId"],
+            racks_col.update_one({"rack_id": rack_id}, {"$set": {"currentBike": bike_data["bike_id"]}, "$push": {"history": {
+                "bike_id": bike_data["bike_id"],
                 "action": "dock",
                 "timestamp": now}}})
         return jsonify({"status": "success", "id": str(result.inserted_id)}), 201
@@ -546,20 +600,20 @@ def create_bike():
 @app.route("/smartpedals/api/bikes/<string:bike_id>", methods=["PUT"])
 def update_bike(bike_id):
     update = request.get_json()
-    update.pop("bikeId", None)
+    update.pop("bike_id", None)
 
     # Ty to change rack
     new_rack = update.get("currentRack")
     now = datetime.now(BRUSSELS)
     if new_rack is not None:
-        rack = racks_col.find_one({"rackId": new_rack})
+        rack = racks_col.find_one({"rack_id": new_rack})
         if not rack:
             return jsonify({"status": "error", "message": f"Rack '{new_rack}' not found"}), 400
         if rack.get("currentBike") is not None:
             return jsonify({"status": "error", "message": f"Rack '{new_rack}' is already occupied"}), 400
     try:
         # Get the old rack
-        bike = bikes_col.find_one({"bikeId": bike_id})
+        bike = bikes_col.find_one({"bike_id": bike_id})
 
         # Don't update a bike if it is in use
         if bike.get("status") == "in_use" or bike.get("currentUser") is not None:
@@ -568,19 +622,19 @@ def update_bike(bike_id):
         old_rack = bike.get("currentRack")
 
         res = bikes_col.update_one(
-            {"bikeId": bike_id},
+            {"bike_id": bike_id},
             {"$set": update}
         )
         if res.matched_count:
             # Free old slot and occupy a new one
             if new_rack is not None:
                 if old_rack:
-                    racks_col.update_one({"rackId": old_rack}, {"$set": {"currentBike": None}, "$push": {"history": {
-                        "bikeId": bike_id,
+                    racks_col.update_one({"rack_id": old_rack}, {"$set": {"currentBike": None}, "$push": {"history": {
+                        "bike_id": bike_id,
                         "action": "undock",
                         "timestamp": now}}})
-                racks_col.update_one({"rackId": new_rack}, {"$set": {"currentBike": bike_id}, "$push": {"history": {
-                    "bikeId": bike_id,
+                racks_col.update_one({"rack_id": new_rack}, {"$set": {"currentBike": bike_id}, "$push": {"history": {
+                    "bike_id": bike_id,
                     "action": "dock",
                     "timestamp": now}}})
             return jsonify({"status": "updated"}), 200
@@ -591,7 +645,7 @@ def update_bike(bike_id):
 
 @app.route("/smartpedals/api/bikes/<string:bike_id>", methods=["DELETE"])
 def delete_bike(bike_id):
-    bike = bikes_col.find_one({"bikeId": bike_id})
+    bike = bikes_col.find_one({"bike_id": bike_id})
 
     # Don't delete if in use
     if bike.get("status") == "in_use" or bike.get("currentUser") is not None:
@@ -601,11 +655,11 @@ def delete_bike(bike_id):
     now = datetime.now(BRUSSELS)
     old_rack = bike.get("currentRack")
     if old_rack:
-        racks_col.update_one({"rackId": old_rack}, {"$set": {"currentBike": None}, "$push": {"history": {
-            "bikeId": bike_id,
+        racks_col.update_one({"rack_id": old_rack}, {"$set": {"currentBike": None}, "$push": {"history": {
+            "bike_id": bike_id,
             "action": "undock",
             "timestamp": now}}})
-    result = bikes_col.delete_one({"bikeId": bike_id})
+    result = bikes_col.delete_one({"bike_id": bike_id})
     if result.deleted_count:
         return jsonify({"status": "deleted"}), 200
     return jsonify({"status": "not_found"}), 404
@@ -618,8 +672,8 @@ def list_racks():
     for d in docs:
         racks.append({
             "id": str(d["_id"]),
-            "rackId": d.get("rackId"),
-            "stationId": d.get("stationId"),
+            "rack_id": d.get("rack_id"),
+            "station_id": d.get("station_id"),
             "currentBike": d.get("currentBike"),
             "history": d.get("history", [])
         })
@@ -627,13 +681,13 @@ def list_racks():
 
 @app.route("/smartpedals/api/racks/<string:rack_id>", methods=["GET"])
 def get_rack(rack_id):
-    d = racks_col.find_one({"rackId": rack_id})
+    d = racks_col.find_one({"rack_id": rack_id})
     if not d:
         return jsonify({"status": "not_found"}), 404
     rack = {
         "id": str(d["_id"]),
-        "rackId": d.get("rackId"),
-        "stationId": d.get("stationId"),
+        "rack_id": d.get("rack_id"),
+        "station_id": d.get("station_id"),
         "currentBike": d.get("currentBike"),
         "history": d.get("history", [])
     }
@@ -642,12 +696,12 @@ def get_rack(rack_id):
 @app.route("/smartpedals/api/racks", methods=["POST"])
 def create_rack():
     rack_data = request.get_json()
-    rack_id = rack_data.get("rackId")
+    rack_id = rack_data.get("rack_id")
 
     # Station ID is required
-    station_id = rack_data.get("stationId")
+    station_id = rack_data.get("station_id")
     if station_id:
-        station = stations_col.find_one({"stationId": station_id})
+        station = stations_col.find_one({"station_id": station_id})
         if not station:
             return jsonify({"status": "error", "message": f"Station '{station_id}' not found"}), 400
 
@@ -657,7 +711,7 @@ def create_rack():
         # Add this rack to the station
         if station_id:
             stations_col.update_one(
-                {"stationId": station_id},
+                {"station_id": station_id},
                 {"$push": {"racks": rack_id}}
             )
         return jsonify({"status": "success", "id": str(result.inserted_id)}), 201
@@ -666,22 +720,22 @@ def create_rack():
 
 @app.route("/smartpedals/api/racks/<string:rack_id>", methods=["DELETE"])
 def delete_rack(rack_id):
-    rack = racks_col.find_one({"rackId": rack_id})
+    rack = racks_col.find_one({"rack_id": rack_id})
 
     # Don't delete if there is a bike
     if rack.get("currentBike") is not None:
         return jsonify({"status": "error", "message": f"Cannot delete rack '{rack_id}' while a bike is docked"}), 400
 
     # Remove the rack from the station
-    station_id = rack.get("stationId")
+    station_id = rack.get("station_id")
     if station_id:
         stations_col.update_one(
-            {"stationId": station_id},
+            {"station_id": station_id},
             {"$pull": {"racks": rack_id}}
         )
 
     # Delete the rack
-    res = racks_col.delete_one({"rackId": rack_id})
+    res = racks_col.delete_one({"rack_id": rack_id})
     if res.deleted_count:
         return jsonify({"status": "deleted"}), 200
     return jsonify({"status": "not_found"}), 404
@@ -694,7 +748,7 @@ def list_stations():
     for d in docs:
         stations.append({
             "id": str(d["_id"]),
-            "stationId": d.get("stationId"),
+            "station_id": d.get("station_id"),
             "name": d.get("name"),
             "racks": d.get("racks")
         })
@@ -702,12 +756,12 @@ def list_stations():
 
 @app.route("/smartpedals/api/stations/<string:station_id>", methods=["GET"])
 def get_station(station_id):
-    d = stations_col.find_one({"stationId": station_id})
+    d = stations_col.find_one({"station_id": station_id})
     if not d:
         return jsonify({"status": "not_found"}), 404
     station = {
         "id": str(d["_id"]),
-        "stationId": d.get("stationId"),
+        "station_id": d.get("station_id"),
         "name": d.get("name"),
         "racks": d.get("racks", [])
     }
@@ -725,20 +779,20 @@ def create_station():
 @app.route("/smartpedals/api/stations/<string:station_id>", methods=["DELETE"])
 def delete_station(station_id):
     # Check if there are racks in this station
-    station = stations_col.find_one({"stationId": station_id})
+    station = stations_col.find_one({"station_id": station_id})
 
     # Check if there are racks with bikes
     racks = station.get("racks", [])
     for rack in racks:
-        rack_data = racks_col.find_one({"rackId": rack})
+        rack_data = racks_col.find_one({"rack_id": rack})
         if rack_data and rack_data.get("currentBike") is not None:
             return jsonify({"status": "error", "message": f"Cannot delete station '{station_id}' while a bike is docked"}), 400
         
         # Remove the racks from the racks collection
-        racks_col.delete_one({"rackId": rack})
+        racks_col.delete_one({"rack_id": rack})
 
-    # racks_col.delete_many({"stationId": station_id})
-    result = stations_col.delete_one({"stationId": station_id})
+    # racks_col.delete_many({"station_id": station_id})
+    result = stations_col.delete_one({"station_id": station_id})
     if result.deleted_count:
         return jsonify({"status": "deleted"}), 200
     return jsonify({"status": "not_found"}), 404
@@ -819,7 +873,23 @@ def weather():
 @app.route("/smartpedals/support", methods=["GET"])
 def support():
     room_id = (request.args.get("room_id") or "").strip()
-    return render_template("support.html", room_id=room_id, default_title=SUPPORT_DEFAULT_TITLE, support_members=os.environ.get("SUPPORT_MEMBERS", ""))
+    excuse = None
+    try:
+        # Fetch a random developer excuse from the API
+        developer_excuse_response = requests.get("http://developerexcuses.com/", timeout=5)
+        developer_excuse_response.raise_for_status()
+        excuse = developer_excuse_response.text.strip()
+
+        # Extract the excuse text from the HTML response
+        html_content = developer_excuse_response.text
+        match = re.search(r'<a href="/" rel="nofollow" style="[^"]*">(.*?)</a>', html_content)
+        if match:
+            excuse = match.group(1)
+
+    except requests.RequestException as e:
+        app.logger.warning(f"Failed to fetch developer excuse: {e}")
+
+    return render_template("support.html", room_id=room_id, default_title=SUPPORT_DEFAULT_TITLE, support_members=os.environ.get("SUPPORT_MEMBERS", ""), excuse=excuse)
 
 # Create room + invite members + post welcome (capture web URL)
 @app.route("/smartpedals/support/create", methods=["POST"])
@@ -967,6 +1037,59 @@ def support_delete():
         app.logger.error(f"Webex delete error for room {room_id}: {e}")
 
     return redirect(url_for("support"))
+
+# Security page
+@app.route("/smartpedals/security", methods=["GET"])
+def security():
+    api_info = None
+    hepl_info = None
+    mosq_info = None
+
+    if not SHODAN_API_KEY:
+        app.logger.error("SHODAN_API_KEY not configured")
+        flash("SHODAN_API_KEY not configured", "error")
+        return render_template("security.html", api_info=None, hepl_info=None, mosq_info=None)
+
+    try:
+        # Api info
+        url_info = f"{SHODAN_API_BASE}/api-info"
+        params = {"key": SHODAN_API_KEY}
+        resp_info = requests.get(url_info, params=params, timeout=5)
+        resp_info.raise_for_status()
+        api_info = resp_info.json()
+    except requests.RequestException as e:
+        app.logger.error(f"Error fetching Shodan API info: {e}")
+        flash("Failed to fetch Shodan API information.", "error")
+
+    try:
+        # hepl info
+        url_hepl = f"{SHODAN_API_BASE}/shodan/host/{requests.get('https://api.ipify.org').text.strip()}"
+        resp_hepl = requests.get(url_hepl, params=params, timeout=10)
+        app.logger.info(f"HEPL lookup response: {resp_hepl.status_code} - {resp_hepl.text}")
+        # Handle specific status codes
+        if resp_hepl.status_code in (401, 403):
+            flash(f"HEPL lookup blocked by Shodan plan (HTTP {resp_hepl.status_code}).", "warning")
+        resp_hepl.raise_for_status()
+        hepl_info = resp_hepl.json()
+    except requests.RequestException as e:
+        app.logger.error(f"Error fetching Shodan HEPL info: {e}")
+        flash("Failed to fetch Shodan HEPL information.", "error")
+
+    try:
+        # test.mosquitto.org info
+        url_mosq = f"{SHODAN_API_BASE}/shodan/host/test.mosquitto.org"
+        resp_mosq = requests.get(url_mosq, params=params, timeout=10)
+        app.logger.info(f"MQTT lookup response: {resp_mosq.status_code} - {resp_mosq.text}")
+        # Handle specific status codes
+        if resp_mosq.status_code in (401, 403):
+            flash(f"MQTT lookup blocked by Shodan plan (HTTP {resp_mosq.status_code}).", "warning")
+        resp_mosq.raise_for_status()
+        mosq_info = resp_host.json()
+    except requests.RequestException as e:
+        app.logger.error(f"Error fetching Shodan MQTT info: {e}")
+        flash("Failed to fetch Shodan MQTT information.", "error")
+
+    return render_template("security.html", api_info=api_info, hepl_info=hepl_info, mosq_info=mosq_info)
 
 if __name__ == "__main__":
     # app.run(debug=True, use_reloader=False, threaded=True, host="0.0.0.0")

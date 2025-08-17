@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>SmartPedals Security (Shodan)</title>
+</head>
+<body>
+  <p><a href="{{ url_for('home') }}">← Home</a></p>
+  <h1>Security - Shodan</h1>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <ul>
+      {% for cat, msg in messages %}
+        <!-- cat red if error or orange if warning -->
+        {% if cat == 'error' %}
+          <li style="color: red;"><strong>Error:</strong> {{ msg }}</li>
+        {% elif cat == 'warning' %}
+          <li style="color: orange;"><strong>Warning:</strong> {{ msg }}</li>
+        {% else %}
+          <li><strong>{{ cat }}:</strong> {{ msg }}</li>
+        {% endif %}
+      {% endfor %}
+      </ul>
+    {% endif %}
+  {% endwith %}
+
+  <!-- API Info -->
+  <h2>API Plan Information</h2>
+  {% if api_info %}
+    <p><strong>Plan:</strong> {{ api_info.plan }}</p>
+    <p><strong>Query Credits:</strong> {{ api_info.usage_limits.query_credits }}</p>
+    <p><strong>Scan Credits:</strong> {{ api_info.usage_limits.scan_credits }}</p>
+    <p><strong>HTTPS Support:</strong> {{ api_info.https }}</p>
+  {% else %}
+    <p>No data from Shodan API Info.</p>
+  {% endif %}
+
+  <!-- HEPL Public IP Lookup -->
+  <h2>Lookup - HEPL Public IP</h2>
+  {% if hepl_info %}
+    <p><strong>IP:</strong> {{ hepl_info.ip }}</p>
+    <p><strong>Organization:</strong> {{ hepl_info.org }}</p>
+    <p><strong>Country:</strong> {{ hepl_info.country_name }}</p>
+    <p><strong>ISP:</strong> {{ hepl_info.isp }}</p>
+    <p><strong>Hostnames:</strong> {{ hepl_info.hostnames|join(", ") if hepl_info.hostnames else "(none)" }}</p>
+  {% else %}
+    <p>No data from Shodan HEPL lookup.</p>
+  {% endif %}
+
+  <!-- Mosquitto Public IP Lookup -->
+  <h2>Lookup - test.mosquitto.org</h2>
+  {% if ip_info %}
+    <p><strong>IP:</strong> {{ ip_info.ip }}</p>
+    <p><strong>Organization:</strong> {{ ip_info.org or "?" }}</p>
+    <p><strong>Country:</strong> {{ ip_info.country_name or "?" }}</p>
+    <p><strong>ISP:</strong> {{ ip_info.isp or "?" }}</p>
+    <p><strong>Hostnames:</strong> {{ ip_info.hostnames|join(", ") if ip_info.hostnames else "(none)" }}</p>
+  {% else %}
+    <p>No data from Shodan host lookup.</p>
+  {% endif %}
+
+  <!-- Debug -->
+  <h2>Debug (raw JSON)</h2>
+  {% if api_info %}
+    <h3>API Info JSON</h3>
+    <pre>{{ api_info | tojson(indent=2) }}</pre>
+  {% endif %}
+  {% if hepl_info %}
+    <h3>HEPL Info JSON</h3>
+    <pre>{{ hepl_info | tojson(indent=2) }}</pre>
+  {% endif %}
+  {% if mosq_info %}
+    <h3>Mosquitto Info JSON</h3>
+    <pre>{{ mosq_info | tojson(indent=2) }}</pre>
+  {% endif %}
+</body>
+</html>
