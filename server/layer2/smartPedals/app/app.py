@@ -53,6 +53,11 @@ OPENWEATHER_API_KEY = os.environ.get("OPENWEATHER_API_KEY", "")
 DEFAULT_CITY = os.environ.get("DEFAULT_CITY", "Angleur")
 OPENWEATHER_LANG = os.environ.get("OPENWEATHER_LANG", "en")
 
+# Mailtrap
+MAILTRAP_TOKEN = os.environ.get("MAILTRAP_TOKEN", "")
+MAILTRAP_EMAIL = os.environ.get("MAILTRAP_EMAIL", "")
+MAILTRAP_CAT = os.environ.get("MAILTRAP_CAT", "end-user")
+
 # Twilio (SMS notifications)
 TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID", "")
 TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN", "")
@@ -151,6 +156,55 @@ def insert_to_mongo(topic, payload):
     except Exception as e:
         print(f"[MQTT] Error during insert: {e}")
 
+# Send email via Mailtrap
+def send_mailtrap_email(to_email: str, subject: str, text: str, to_name: str | None = None) -> bool:
+    try:
+        if not MAILTRAP_TOKEN or not MAILTRAP_EMAIL:
+            app.logger.warning("[MAILTRAP] Missing MAILTRAP_TOKEN or MAILTRAP_EMAIL")
+            return False
+
+        headers = {
+            "Authorization": f"Bearer {MAILTRAP_TOKEN}",
+            "Content-Type": "application/json",
+        }
+        payload = {
+            "from": {"email": MAILTRAP_EMAIL, "name": "SmartPedals"},
+            "to": [{"email": to_email, "name": (to_name or "User")}],
+            "subject": subject,
+            "text": text,
+            "category": MAILTRAP_CAT,
+        }
+
+        resp = requests.post(
+            "https://send.api.mailtrap.io/api/send",
+            headers=headers,
+            json=payload,
+            timeout=5,
+        )
+        if 200 <= resp.status_code < 300:
+            app.logger.info(f"[MAILTRAP] Email sent to {to_email}: {subject}")
+            return True
+        else:
+            app.logger.warning(f"[MAILTRAP] Send failed {resp.status_code}: {resp.text}")
+            return False
+    except Exception as e:
+        app.logger.exception(f"[MAILTRAP] Exception while sending email: {e}")
+        return False
+
+# Twilio message
+def twilio_send_sms(body: str) -> bool:
+    try:
+        msg = twilio_client.messages.create(
+            from_=TWILIO_NUMBER,
+            to=TARGET_NUMBER,
+            body=body
+        )
+        print(f"[TWILIO] SMS sent: sid={msg.sid}")
+        return True
+    except Exception as e:
+        print(f"[TWILIO] Send error: {e}")
+        return False
+
 # Handle authentication messages
 def handle_auth_message(mqtt_client_instance, payload):
     reply_topic = "hepl/auth_reply"
@@ -248,6 +302,29 @@ def handle_auth_message(mqtt_client_instance, payload):
             mqtt_client_instance.publish(reply_topic, json.dumps(reply), qos=2, retain=False)
             app.logger.info(f"[AUTH] Unlock accepted for user={user_id} bike={bike_id} rack={rack_id}")
             publish_ping()
+
+            try:
+                # User email notification
+                to_email = user.get("email") if isinstance(user, dict) else None
+                first = user.get("firstName") if isinstance(user, dict) else None
+                last  = user.get("lastName")  if isinstance(user, dict) else None
+                full_name = f"{first} {last}".strip() if first or last else "User"
+
+                if to_email:
+                    subject = f"Bike {bike_id} unlocked"
+                    text = (
+                        f"Hello {full_name},\n\n"
+                        f"Your bike {bike_id} has been unlocked at {now_iso}.\n"
+                        f"Rack: {rack_id or 'n/a'}.\n"
+                        f"Enjoy the ride!\n\n— HEPL Team"
+                    )
+                    send_mailtrap_email(to_email=to_email, subject=subject, text=text, to_name=full_name)
+                else:
+                    app.logger.warning(f"[MAILTRAP] No email for user {user_id}; skipping email")
+            except Exception as e:
+                app.logger.exception(f"[MAILTRAP] Error while preparing/sending unlock email: {e}")
+
+            # If we reach here, the unlock was successful
             return
 
         # Action: lock
@@ -380,20 +457,7 @@ def on_connect_ext(client, userdata, flag, rc):
     print(f"[EXT MQTT] Connected to {EXT_MQTT_BROKER} with rc {rc}")
     client.subscribe("hepl/disponibilities")
 
-# Twilio message
-def twilio_send_sms(body: str) -> bool:
-    try:
-        msg = twilio_client.messages.create(
-            from_=TWILIO_NUMBER,
-            to=TARGET_NUMBER,
-            body=body
-        )
-        print(f"[TWILIO] SMS sent: sid={msg.sid}")
-        return True
-    except Exception as e:
-        print(f"[TWILIO] Send error: {e}")
-        return False
-
+# Handle disponibilities alerts with twilio
 def handle_disponibility_alerts(count: int):
     """
     If count stays 0 for ZERO_ALERT_SECONDS, send one "no bikes" SMS and arm recovery.
