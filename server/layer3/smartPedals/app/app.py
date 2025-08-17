@@ -4,6 +4,7 @@ import ssl
 import threading
 import asyncio
 import queue
+import json
 
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -26,6 +27,8 @@ app.secret_key = "dev"
 MQTT_BROKER = os.environ.get("MQTT_BROKER", "hepl.local")
 MQTT_PORT = int(os.environ.get("MQTT_PORT", 1883))
 MQTT_TOPIC_BASE = "hepl/sensors"
+MQTT_AUTH_TOPIC = "hepl/auth"
+MQTT_AUTH_REPLY_TOPIC = "hepl/auth_reply"
 MQTT_USERNAME = "smartadmin"
 MQTT_PASSWORD = "smartpass"
 MQTT_CLIENT_ID_SUB = "trusted-enterprise_smartPedals_sub" # Two different, publish.single() keep the connection a little -> broker kill the old
@@ -92,11 +95,44 @@ def publish_sensor_data():
 
     return data
 
+def publish_auth(action: str, user_id="1", rack_id="1", bike_id="1"):
+    """
+    Publish an auth request (unlock/lock) with QoS 2 on hepl/auth.
+    action: "unlock" or "lock"
+    """
+    ts_iso = datetime.now(ZoneInfo("Europe/Brussels")).isoformat(timespec="seconds")
+    payload = {
+        "user_id": user_id,
+        "timestamp": ts_iso,   # ← ISO 8601 au lieu d'un entier
+        "rack_id": rack_id,
+        "bike_id": bike_id,
+        "type": action
+    }
+    publish.single(
+        MQTT_AUTH_TOPIC,       # ← corrige AUTH_TOPIC → MQTT_AUTH_TOPIC
+        payload=json.dumps(payload),
+        hostname=MQTT_BROKER,
+        port=MQTT_PORT,
+        client_id=MQTT_CLIENT_ID_PUB,
+        auth={'username': MQTT_USERNAME, 'password': MQTT_PASSWORD},
+        tls={
+            'ca_certs': CA_CERT,
+            'certfile': CLIENT_CERT,
+            'keyfile': CLIENT_KEY,
+            'tls_version': ssl.PROTOCOL_TLSv1_2,
+            'cert_reqs': ssl.CERT_REQUIRED
+        },
+        qos=2,
+        retain=False
+    )
+    return payload
+
 # MQTT callbacks
 def on_connect(client, userdata, flags, rc, properties=None):
     #print(f"[MQTT] CONNECT result: {rc}")
     if rc == 0:
         client.subscribe(f"{MQTT_TOPIC_BASE}/#")
+        client.subscribe(MQTT_AUTH_REPLY_TOPIC, qos=2)
         print("[MQTT] Connected and subscribed.")
     else:
         print("[MQTT] Connection failed with code", rc)
@@ -161,6 +197,18 @@ def send():
 def reconnect():
     start_subscriber()
     flash("MQTT subscriber reconnected.")
+    return redirect(url_for("index"))
+
+@app.route("/smartpedals/auth/unlock", methods=["POST"])
+def auth_unlock():
+    payload = publish_auth("unlock")
+    flash(f"Auth sent (unlock): {payload}")
+    return redirect(url_for("index"))
+
+@app.route("/smartpedals/auth/lock", methods=["POST"])
+def auth_lock():
+    payload = publish_auth("lock")
+    flash(f"Auth sent (lock): {payload}")
     return redirect(url_for("index"))
 
 @app.route("/smartpedals/chat")

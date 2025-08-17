@@ -721,7 +721,7 @@
         "height": "4",
         "columns": [
             {
-                "field": "bikeId",
+                "field": "bike_id",
                 "title": "Bike Id",
                 "width": "",
                 "align": "left",
@@ -869,7 +869,7 @@
         "height": "4",
         "columns": [
             {
-                "field": "rackId",
+                "field": "rack_id",
                 "title": "Rack Id",
                 "width": "",
                 "align": "left",
@@ -879,7 +879,7 @@
                 }
             },
             {
-                "field": "stationId",
+                "field": "station_id",
                 "title": "Station Id",
                 "width": "",
                 "align": "left",
@@ -1389,7 +1389,7 @@
         "options": [
             {
                 "label": "Bike Id",
-                "value": "bikeId",
+                "value": "bike_id",
                 "type": "text",
                 "required": true,
                 "rows": null
@@ -1403,7 +1403,7 @@
             }
         ],
         "formValue": {
-            "bikeId": "",
+            "bike_id": "",
             "currentRack": ""
         },
         "payload": "",
@@ -1490,22 +1490,22 @@
         "options": [
             {
                 "label": "Rack Id",
-                "value": "rackId",
+                "value": "rack_id",
                 "type": "text",
                 "required": true,
                 "rows": null
             },
             {
                 "label": "Station Id",
-                "value": "stationId",
+                "value": "station_id",
                 "type": "text",
                 "required": true,
                 "rows": null
             }
         ],
         "formValue": {
-            "rackId": "",
-            "stationId": ""
+            "rack_id": "",
+            "station_id": ""
         },
         "payload": "",
         "submit": "submit",
@@ -1556,9 +1556,9 @@
         "rules": [
             {
                 "t": "set",
-                "p": "selected_bikeId",
+                "p": "selected_bike_id",
                 "pt": "flow",
-                "to": "payload.bikeId",
+                "to": "payload.bike_id",
                 "tot": "msg"
             }
         ],
@@ -1621,7 +1621,7 @@
         "z": "f8bc54da016b7352",
         "g": "b257784fc310cf77",
         "name": "Parse URL",
-        "func": "var bikeId = flow.get(\"selected_bikeId\");\nif (bikeId) {\n    msg.url = \"https://hepl.local/smartpedals/api/bikes/\" + bikeId;\n} else {\n    return null;\n}\n\nreturn msg;",
+        "func": "var bike_id = flow.get(\"selected_bike_id\");\nif (bike_id) {\n    msg.url = \"https://hepl.local/smartpedals/api/bikes/\" + bike_id;\n} else {\n    return null;\n}\n\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
@@ -1646,7 +1646,7 @@
         "order": 3,
         "width": 0,
         "height": 0,
-        "format": "<div class=\"form-group\">\n    <label for=\"bikeId\">Bike Id</label>\n    <input type=\"text\" class=\"form-control\" id=\"bikeId\" value=\"{{msg.payload.bikeId}}\" readonly>\n</div>",
+        "format": "<div class=\"form-group\">\n    <label for=\"bike_id\">Bike Id</label>\n    <input type=\"text\" class=\"form-control\" id=\"bike_id\" value=\"{{msg.payload.bike_id}}\" readonly>\n</div>",
         "storeOutMessages": true,
         "fwdInMessages": true,
         "resendOnRefresh": true,
@@ -1719,7 +1719,7 @@
         "z": "f8bc54da016b7352",
         "g": "b257784fc310cf77",
         "name": "Parse URL",
-        "func": "var bikeId = flow.get(\"selected_bikeId\");\nif (bikeId) {\n    msg.url = \"https://hepl.local/smartpedals/api/bikes/\" + bikeId;\n} else {\n    return null;\n}\n\nreturn msg;",
+        "func": "var bike_id = flow.get(\"selected_bike_id\");\nif (bike_id) {\n    msg.url = \"https://hepl.local/smartpedals/api/bikes/\" + bike_id;\n} else {\n    return null;\n}\n\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
@@ -1798,9 +1798,9 @@
         "rules": [
             {
                 "t": "set",
-                "p": "selected_rackId",
+                "p": "selected_rack_id",
                 "pt": "flow",
-                "to": "payload.rackId",
+                "to": "payload.rack_id",
                 "tot": "msg"
             }
         ],
@@ -1824,7 +1824,7 @@
         "z": "f8bc54da016b7352",
         "g": "9b84c8604e72fb7c",
         "name": "Parse URL",
-        "func": "var rackId = flow.get(\"selected_rackId\");\nif (rackId) {\n    msg.url = \"https://hepl.local/smartpedals/api/racks/\" + rackId;\n} else {\n    return null;\n}\n\nreturn msg;",
+        "func": "var rack_id = flow.get(\"selected_rack_id\");\nif (rack_id) {\n    msg.url = \"https://hepl.local/smartpedals/api/racks/\" + rack_id;\n} else {\n    return null;\n}\n\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
@@ -1849,7 +1849,7 @@
         "order": 3,
         "width": 0,
         "height": 0,
-        "format": "<div class=\"form-group\">\n    <label for=\"rackId\">Rack Id</label>\n    <input type=\"text\" class=\"form-control\" id=\"rackId\" value=\"{{msg.payload.rackId}}\" readonly>\n</div>",
+        "format": "<div class=\"form-group\">\n    <label for=\"rack_id\">Rack Id</label>\n    <input type=\"text\" class=\"form-control\" id=\"rackId\" value=\"{{msg.payload.rack_id}}\" readonly>\n</div>",
         "storeOutMessages": true,
         "fwdInMessages": true,
         "resendOnRefresh": true,
@@ -2150,7 +2150,6 @@
         "id": "467e14ec67bcd335",
         "type": "function",
         "z": "f8bc54da016b7352",
-        "d": true,
         "g": "156e55908398abf2",
         "name": "Prepare Email Notification Create",
         "func": "// Get env vars\nconst token = env.get(\"MAILTRAP_TOKEN\");\nif (!token) {\n    node.error(\"MAILTRAP_TOKEN not in the environment\");\n    return null;\n}\n\nconst target = env.get(\"TARGET_EMAIL\");\nif (!target) {\n    node.error(\"TARGET_EMAIL not in the environment\");\n    return null;\n}\n\nconst sender = env.get(\"MAILTRAP_EMAIL\")\nif (!sender) {\n    node.error(\"MAILTRAP_EMAIL not in the environment\");\n    return null;\n}\n\n// RFID\nconst rfid = msg.payload.rfid;\n\n// API request\nmsg.headers = {\n    \"Authorization\": `Bearer ${token}`,\n    \"Content-Type\": \"application/json\"\n};\n\nmsg.payload = {\n    from: { email: sender, name: \"Node-RED User Creation\" },\n    to: [{ email: target }],\n    subject: \"User Created Notification\",\n    text: `The user ${rfid} has been created.`,\n    category: \"HEPL\"\n};\n\nreturn msg;",
@@ -2172,7 +2171,6 @@
         "id": "94360ae29ca327ba",
         "type": "http request",
         "z": "f8bc54da016b7352",
-        "d": true,
         "g": "156e55908398abf2",
         "name": "Send Email",
         "method": "POST",
@@ -2196,7 +2194,6 @@
         "id": "3ee03c0578b85bb9",
         "type": "function",
         "z": "f8bc54da016b7352",
-        "d": true,
         "g": "156e55908398abf2",
         "name": "Prepare Email Notification Update",
         "func": "// Get env vars\nconst token = env.get(\"MAILTRAP_TOKEN\");\nif (!token) {\n    node.error(\"MAILTRAP_TOKEN not in the environment\");\n    return null;\n}\n\nconst target = env.get(\"TARGET_EMAIL\");\nif (!target) {\n    node.error(\"TARGET_EMAIL not in the environment\");\n    return null;\n}\n\nconst sender = env.get(\"MAILTRAP_EMAIL\")\nif (!sender) {\n    node.error(\"MAILTRAP_EMAIL not in the environment\");\n    return null;\n}\n\n// RFID\nconst rfid = flow.get(\"selected_rfid\");\n\n// API request\nmsg.headers = {\n    \"Authorization\": `Bearer ${token}`,\n    \"Content-Type\": \"application/json\"\n};\n\nmsg.payload = {\n    from: { email: sender, name: \"Node-RED User Update\" },\n    to: [{ email: target }],\n    subject: \"User Updated Notification\",\n    text: `The user ${rfid} has been updated.`,\n    category: \"HEPL\"\n};\n\nreturn msg;",
@@ -2218,7 +2215,6 @@
         "id": "ed1da2a50a22c4b4",
         "type": "http request",
         "z": "f8bc54da016b7352",
-        "d": true,
         "g": "156e55908398abf2",
         "name": "Send Email",
         "method": "POST",
@@ -2242,7 +2238,6 @@
         "id": "be8a254a80eacc5f",
         "type": "function",
         "z": "f8bc54da016b7352",
-        "d": true,
         "g": "156e55908398abf2",
         "name": "Prepare Email Notification Delete",
         "func": "// Get env vars\nconst token = env.get(\"MAILTRAP_TOKEN\");\nif (!token) {\n    node.error(\"MAILTRAP_TOKEN not in the environment\");\n    return null;\n}\n\nconst target = env.get(\"TARGET_EMAIL\");\nif (!target) {\n    node.error(\"TARGET_EMAIL not in the environment\");\n    return null;\n}\n\nconst sender = env.get(\"MAILTRAP_EMAIL\")\nif (!sender) {\n    node.error(\"MAILTRAP_EMAIL not in the environment\");\n    return null;\n}\n\n// RFID\nconst rfid = flow.get(\"selected_rfid\");\n\n// API request\nmsg.headers = {\n    \"Authorization\": `Bearer ${token}`,\n    \"Content-Type\": \"application/json\"\n};\n\nmsg.payload = {\n    from: { email: sender, name: \"Node-RED User Delete\" },\n    to: [{ email: target }],\n    subject: \"User Deleted Notification\",\n    text: `The user ${rfid} has been deleted.`,\n    category: \"HEPL\"\n};\n\nreturn msg;",
@@ -2264,7 +2259,6 @@
         "id": "b9b2ce468ff6f3a2",
         "type": "http request",
         "z": "f8bc54da016b7352",
-        "d": true,
         "g": "156e55908398abf2",
         "name": "Send Email",
         "method": "POST",
@@ -2374,7 +2368,7 @@
         "name": "Support IFrame",
         "order": 0,
         "width": "12",
-        "height": "6",
+        "height": "7",
         "format": "<iFrame src=\"https://hepl.local/smartpedals/support\" style=\"width:100%; height:100%; border:none;\"></iFrame>",
         "storeOutMessages": true,
         "fwdInMessages": true,
@@ -2445,7 +2439,7 @@
         "height": "4",
         "columns": [
             {
-                "field": "stationId",
+                "field": "station_id",
                 "title": "Station Id",
                 "width": "",
                 "align": "left",
@@ -2509,7 +2503,7 @@
         "options": [
             {
                 "label": "Station Id",
-                "value": "stationId",
+                "value": "station_id",
                 "type": "text",
                 "required": true,
                 "rows": null
@@ -2523,7 +2517,7 @@
             }
         ],
         "formValue": {
-            "stationId": "",
+            "station_id": "",
             "name": ""
         },
         "payload": "",
@@ -2622,9 +2616,9 @@
         "rules": [
             {
                 "t": "set",
-                "p": "selected_stationId",
+                "p": "selected_station_id",
                 "pt": "flow",
-                "to": "payload.stationId",
+                "to": "payload.station_id",
                 "tot": "msg"
             }
         ],
@@ -2633,7 +2627,7 @@
         "from": "",
         "to": "",
         "reg": false,
-        "x": 870,
+        "x": 880,
         "y": 1140,
         "wires": [
             [
@@ -2681,7 +2675,7 @@
         "order": 3,
         "width": 0,
         "height": 0,
-        "format": "<div class=\"form-group\">\n    <label for=\"stationId\">Station Id</label>\n    <input type=\"text\" class=\"form-control\" id=\"stationId\" value=\"{{msg.payload.stationId}}\" readonly>\n</div>",
+        "format": "<div class=\"form-group\">\n    <label for=\"station_id\">Station Id</label>\n    <input type=\"text\" class=\"form-control\" id=\"station_id\" value=\"{{msg.payload.station_id}}\" readonly>\n</div>",
         "storeOutMessages": true,
         "fwdInMessages": true,
         "resendOnRefresh": true,
@@ -2699,7 +2693,7 @@
         "z": "f8bc54da016b7352",
         "g": "bcf3dc375487e4e2",
         "name": "Parse URL",
-        "func": "var stationId = flow.get(\"selected_stationId\");\nif (stationId) {\n    msg.url = \"https://hepl.local/smartpedals/api/stations/\" + stationId;\n} else {\n    return null;\n}\n\nreturn msg;",
+        "func": "var station_id = flow.get(\"selected_station_id\");\nif (station_id) {\n    msg.url = \"https://hepl.local/smartpedals/api/stations/\" + station_id;\n} else {\n    return null;\n}\n\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
@@ -2903,7 +2897,7 @@
         "type": "function",
         "z": "96c3cda21b90f5d3",
         "name": "Bikes Positions",
-        "func": "const PALETTE = [\n  \"#e6194B\", \"#3cb44b\", \"#ffe119\", \"#4363d8\", \"#f58231\",\n  \"#911eb4\", \"#42d4f4\", \"#f032e6\", \"#bfef45\", \"#fabed4\",\n  \"#469990\", \"#dcbeff\", \"#9A6324\", \"#fffac8\", \"#800000\",\n  \"#aaffc3\", \"#808000\", \"#ffd8b1\", \"#000075\", \"#a9a9a9\"\n];\n\nfunction getColorFromString(str) {\n  // FNV-1a rapide\n  let h = 2166136261;\n  for (let i = 0; i < str.length; i++) {\n    h ^= str.charCodeAt(i);\n    h = Math.imul(h, 16777619);\n  }\n  const idx = (h >>> 0) % PALETTE.length;\n  return PALETTE[idx];\n}\n\n// Main function to process the bike locations\nfunction processBikeLocations(msg) {\n  const rows = Array.isArray(msg.payload) ? msg.payload : [];\n  const perBike = new Map();\n\n  // Group locations by bikeId\n  rows.forEach((location) => {\n    if (!location || !location.bikeId || !location.coordinates) return;\n\n    const lat = parseFloat(location.coordinates.lat);\n    const lon = parseFloat(location.coordinates.lon);\n    if (isNaN(lat) || isNaN(lon)) return;\n\n    const ts = new Date(location.timestamp);\n    if (isNaN(ts.getTime())) return;\n\n    if (!perBike.has(location.bikeId)) {\n      perBike.set(location.bikeId, []);\n    }\n    perBike.get(location.bikeId).push({ bikeId: location.bikeId, lat, lon, ts });\n  });\n\n  // Process each bike's locations\n  perBike.forEach((locations, bikeId) => {\n    const sortedLocations = locations\n      .sort((a, b) => a.ts - b.ts)\n      .slice(-10); // Get the last 10 locations\n\n    if (sortedLocations.length === 0) return;\n\n    const color = getColorFromString(bikeId);\n\n    // Send the polyline for the bike's track\n    const line = sortedLocations.map((p) => [p.lat, p.lon]);\n    node.send({\n      payload: {\n        name: `${bikeId}-track`,\n        line,\n        color,\n        weight: 3,\n        opacity: 0.85,\n        layer: \"bikes\",\n      },\n    });\n\n    // Send trail dots for all but the latest point\n    for (let i = 0; i < sortedLocations.length - 1; i++) {\n      const p = sortedLocations[i];\n      const fillOpacity = 0.2 + (i / Math.max(1, sortedLocations.length - 2)) * 0.5;\n      node.send({\n        payload: {\n          name: `${bikeId}#trail${i}`,\n          lat: p.lat,\n          lon: p.lon,\n          radius: 7,\n          color,\n          fillColor: color,\n          opacity: fillOpacity,\n          fillOpacity,\n          layer: \"bikes\",\n        },\n      });\n    }\n\n    // Send the latest point as a bicycle icon\n    const last = sortedLocations[sortedLocations.length - 1];\n    node.send({\n      payload: {\n        name: `${bikeId}#latest`,\n        lat: last.lat,\n        lon: last.lon,\n        icon: \"bicycle\",\n        iconColor: color,\n        color,\n        layer: \"bikes\",\n      },\n    });\n  });\n\n  // Fit the map to the bounds of the \"bikes\" layer\n  node.send({ payload: { command: \"fit\", layer: \"bikes\" } });\n  return null;\n}\n\n// Call the function with the msg object provided by Node-RED\nprocessBikeLocations(msg);\n",
+        "func": "const PALETTE = [\n  \"#e6194B\", \"#3cb44b\", \"#ffe119\", \"#4363d8\", \"#f58231\",\n  \"#911eb4\", \"#42d4f4\", \"#f032e6\", \"#bfef45\", \"#fabed4\",\n  \"#469990\", \"#dcbeff\", \"#9A6324\", \"#fffac8\", \"#800000\",\n  \"#aaffc3\", \"#808000\", \"#ffd8b1\", \"#000075\", \"#a9a9a9\"\n];\n\nfunction getColorFromString(str) {\n  // FNV-1a\n  let h = 2166136261;\n  for (let i = 0; i < str.length; i++) {\n    h ^= str.charCodeAt(i);\n    h = Math.imul(h, 16777619);\n  }\n  const idx = (h >>> 0) % PALETTE.length;\n  return PALETTE[idx];\n}\n\n// Main function to process the bike locations\nfunction processBikeLocations(msg) {\n  const rows = Array.isArray(msg.payload) ? msg.payload : [];\n  const perBike = new Map();\n\n  // Group locations by bikeId\n  rows.forEach((location) => {\n    if (!location || !location.bike_id || !location.coordinates) return;\n\n    const lat = parseFloat(location.coordinates.lat);\n    const lon = parseFloat(location.coordinates.lon);\n    if (isNaN(lat) || isNaN(lon)) return;\n\n    const ts = new Date(location.timestamp);\n    if (isNaN(ts.getTime())) return;\n\n    if (!perBike.has(location.bike_id)) {\n      perBike.set(location.bike_id, []);\n    }\n    perBike.get(location.bike_id).push({ bike_id: location.bike_id, lat, lon, ts });\n  });\n\n  // Process each bike's locations\n  perBike.forEach((locations, bike_id) => {\n    const sortedLocations = locations\n      .sort((a, b) => a.ts - b.ts)\n      .slice(-10); // Get the last 10 locations\n\n    if (sortedLocations.length === 0) return;\n\n    const color = getColorFromString(bike_id);\n\n    // Send the polyline for the bike's track\n    const line = sortedLocations.map((p) => [p.lat, p.lon]);\n    node.send({\n      payload: {\n        name: `${bike_id}-track`,\n        line,\n        color,\n        weight: 3,\n        opacity: 0.85,\n        layer: \"bikes\",\n      },\n    });\n\n    // Send trail dots for all but the latest point\n    for (let i = 0; i < sortedLocations.length - 1; i++) {\n      const p = sortedLocations[i];\n      const fillOpacity = 0.2 + (i / Math.max(1, sortedLocations.length - 2)) * 0.5;\n      node.send({\n        payload: {\n          name: `${bike_id}#trail${i}`,\n          lat: p.lat,\n          lon: p.lon,\n          radius: 7,\n          color,\n          fillColor: color,\n          opacity: fillOpacity,\n          fillOpacity,\n          layer: \"bikes\",\n        },\n      });\n    }\n\n    // Send the latest point as a bicycle icon\n    const last = sortedLocations[sortedLocations.length - 1];\n    node.send({\n      payload: {\n        name: `${bike_id}#latest`,\n        lat: last.lat,\n        lon: last.lon,\n        icon: \"bicycle\",\n        iconColor: color,\n        color,\n        layer: \"bikes\",\n      },\n    });\n  });\n\n  // Fit the map to the bounds of the \"bikes\" layer\n  node.send({ payload: { command: \"fit\", layer: \"bikes\" } });\n  return null;\n}\n\n// Call the function with the msg object provided by Node-RED\nprocessBikeLocations(msg);\n",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
