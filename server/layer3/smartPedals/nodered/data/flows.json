@@ -589,7 +589,19 @@
         "paytoqs": "ignore",
         "url": "https://hepl.local/smartpedals/api/users",
         "tls": "",
+        "persist": false,
+        "proxy": "",
         "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [
+            {
+                "keyType": "other",
+                "keyValue": "x-api-key",
+                "valueType": "other",
+                "valueValue": "${SMARTPEDALS_API_KEY}"
+            }
+        ],
         "x": 360,
         "y": 60,
         "wires": [
@@ -746,7 +758,14 @@
         "insecureHTTPParser": false,
         "authType": "",
         "senderr": false,
-        "headers": [],
+        "headers": [
+            {
+                "keyType": "other",
+                "keyValue": "x-api-key",
+                "valueType": "other",
+                "valueValue": "${SMARTPEDALS_API_KEY}"
+            }
+        ],
         "x": 360,
         "y": 460,
         "wires": [
@@ -894,7 +913,14 @@
         "insecureHTTPParser": false,
         "authType": "",
         "senderr": false,
-        "headers": [],
+        "headers": [
+            {
+                "keyType": "other",
+                "keyValue": "x-api-key",
+                "valueType": "other",
+                "valueValue": "${SMARTPEDALS_API_KEY}"
+            }
+        ],
         "x": 360,
         "y": 840,
         "wires": [
@@ -1112,7 +1138,14 @@
         "insecureHTTPParser": false,
         "authType": "",
         "senderr": false,
-        "headers": [],
+        "headers": [
+            {
+                "keyType": "other",
+                "keyValue": "x-api-key",
+                "valueType": "other",
+                "valueValue": "${SMARTPEDALS_API_KEY}"
+            }
+        ],
         "x": 490,
         "y": 200,
         "wires": [
@@ -1158,7 +1191,14 @@
         "insecureHTTPParser": false,
         "authType": "",
         "senderr": false,
-        "headers": [],
+        "headers": [
+            {
+                "keyType": "other",
+                "keyValue": "x-api-key",
+                "valueType": "other",
+                "valueValue": "${SMARTPEDALS_API_KEY}"
+            }
+        ],
         "x": 1300,
         "y": 60,
         "wires": [
@@ -1386,7 +1426,14 @@
         "insecureHTTPParser": false,
         "authType": "",
         "senderr": false,
-        "headers": [],
+        "headers": [
+            {
+                "keyType": "other",
+                "keyValue": "x-api-key",
+                "valueType": "other",
+                "valueValue": "${SMARTPEDALS_API_KEY}"
+            }
+        ],
         "x": 1320,
         "y": 200,
         "wires": [
@@ -1486,7 +1533,14 @@
         "insecureHTTPParser": false,
         "authType": "",
         "senderr": false,
-        "headers": [],
+        "headers": [
+            {
+                "keyType": "other",
+                "keyValue": "x-api-key",
+                "valueType": "other",
+                "valueValue": "${SMARTPEDALS_API_KEY}"
+            }
+        ],
         "x": 490,
         "y": 600,
         "wires": [
@@ -1587,7 +1641,14 @@
         "insecureHTTPParser": false,
         "authType": "",
         "senderr": false,
-        "headers": [],
+        "headers": [
+            {
+                "keyType": "other",
+                "keyValue": "x-api-key",
+                "valueType": "other",
+                "valueValue": "${SMARTPEDALS_API_KEY}"
+            }
+        ],
         "x": 490,
         "y": 980,
         "wires": [
@@ -1723,7 +1784,14 @@
         "insecureHTTPParser": false,
         "authType": "",
         "senderr": false,
-        "headers": [],
+        "headers": [
+            {
+                "keyType": "other",
+                "keyValue": "x-api-key",
+                "valueType": "other",
+                "valueValue": "${SMARTPEDALS_API_KEY}"
+            }
+        ],
         "x": 1300,
         "y": 460,
         "wires": [
@@ -1799,7 +1867,14 @@
         "insecureHTTPParser": false,
         "authType": "",
         "senderr": false,
-        "headers": [],
+        "headers": [
+            {
+                "keyType": "other",
+                "keyValue": "x-api-key",
+                "valueType": "other",
+                "valueValue": "${SMARTPEDALS_API_KEY}"
+            }
+        ],
         "x": 1300,
         "y": 600,
         "wires": [
@@ -1926,7 +2001,14 @@
         "insecureHTTPParser": false,
         "authType": "",
         "senderr": false,
-        "headers": [],
+        "headers": [
+            {
+                "keyType": "other",
+                "keyValue": "x-api-key",
+                "valueType": "other",
+                "valueValue": "${SMARTPEDALS_API_KEY}"
+            }
+        ],
         "x": 1300,
         "y": 980,
         "wires": [
@@ -1971,7 +2053,14 @@
         "insecureHTTPParser": false,
         "authType": "",
         "senderr": false,
-        "headers": [],
+        "headers": [
+            {
+                "keyType": "other",
+                "keyValue": "x-api-key",
+                "valueType": "other",
+                "valueValue": "${SMARTPEDALS_API_KEY}"
+            }
+        ],
         "x": 370,
         "y": 1360,
         "wires": [
@@ -2466,7 +2555,14 @@
         "insecureHTTPParser": false,
         "authType": "",
         "senderr": false,
-        "headers": [],
+        "headers": [
+            {
+                "keyType": "other",
+                "keyValue": "x-api-key",
+                "valueType": "other",
+                "valueValue": "${SMARTPEDALS_API_KEY}"
+            }
+        ],
         "x": 350,
         "y": 1100,
         "wires": [
@@ -2629,7 +2725,14 @@
         "insecureHTTPParser": false,
         "authType": "",
         "senderr": false,
-        "headers": [],
+        "headers": [
+            {
+                "keyType": "other",
+                "keyValue": "x-api-key",
+                "valueType": "other",
+                "valueValue": "${SMARTPEDALS_API_KEY}"
+            }
+        ],
         "x": 500,
         "y": 1240,
         "wires": [
@@ -2773,7 +2876,14 @@
         "insecureHTTPParser": false,
         "authType": "",
         "senderr": false,
-        "headers": [],
+        "headers": [
+            {
+                "keyType": "other",
+                "keyValue": "x-api-key",
+                "valueType": "other",
+                "valueValue": "${SMARTPEDALS_API_KEY}"
+            }
+        ],
         "x": 1300,
         "y": 1240,
         "wires": [
@@ -3129,7 +3239,14 @@
         "insecureHTTPParser": false,
         "authType": "",
         "senderr": false,
-        "headers": [],
+        "headers": [
+            {
+                "keyType": "other",
+                "keyValue": "x-api-key",
+                "valueType": "other",
+                "valueValue": "${SMARTPEDALS_API_KEY}"
+            }
+        ],
         "x": 370,
         "y": 60,
         "wires": [
