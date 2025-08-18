@@ -10,10 +10,11 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 import requests
+from functools import wraps # For Flask decorators
 from flask import (
     Flask, render_template, request, flash,
     Response, stream_with_context, url_for, redirect,
-    jsonify
+    jsonify, abort
 )
 from pymongo import MongoClient
 import paho.mqtt.client as mqtt
@@ -24,6 +25,7 @@ from twilio.rest import Client as TwilioClient
 FLASK_TLS_CERT = os.environ.get("FLASK_TLS_CERT", "/etc/ssl/client-flask.crt")
 FLASK_TLS_KEY = os.environ.get("FLASK_TLS_KEY",  "/etc/ssl/client-flask.key.unlocked")
 FLASK_TLS_PORT = int(os.environ.get("FLASK_TLS_PORT", "8443"))
+SMARTPEDALS_API_KEY = os.environ.get("SMARTPEDALS_API_KEY", "changeme")
 
 # MongoDB
 MONGO_URL = os.environ.get("MONGO_URL", "mongodb://localhost:27017")
@@ -90,9 +92,23 @@ twilio_client = TwilioClient(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
 zero_since_ts = None
 zero_alert_sent = False
 
+"""
+Initialization and helpers
+"""
+
 # App
 app = Flask(__name__)
 app.secret_key = "dev"
+
+# API Key
+def require_api_key(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        api_key = request.headers.get("x-api-key")
+        if not api_key or api_key != SMARTPEDALS_API_KEY:
+            abort(401)  # Unauthorized
+        return f(*args, **kwargs)
+    return decorated
 
 # Initialize MongoDB
 def init_db():
@@ -204,6 +220,10 @@ def twilio_send_sms(body: str) -> bool:
     except Exception as e:
         print(f"[TWILIO] Send error: {e}")
         return False
+
+"""
+MQTT local secured for authentication (+email) and location messages AND external MQTT for disponibilities (+twilio sms)
+"""
 
 # Handle authentication messages
 def handle_auth_message(mqtt_client_instance, payload):
@@ -538,6 +558,7 @@ MONGO API
 """
 # Users
 @app.route("/smartpedals/api/users", methods=["GET"])
+@require_api_key
 def list_users():
     docs = users_col.find()
     users = []
@@ -553,6 +574,7 @@ def list_users():
     return jsonify(users), 200
 
 @app.route("/smartpedals/api/users/<string:rfid>", methods=["GET"])
+@require_api_key
 def get_user(rfid):
     d = users_col.find_one({"rfid": rfid})
     if not d:
@@ -569,6 +591,7 @@ def get_user(rfid):
     return jsonify(user), 200
 
 @app.route("/smartpedals/api/users", methods=["POST"])
+@require_api_key
 def create_user():
     user_data = request.get_json()
     try:
@@ -578,6 +601,7 @@ def create_user():
         return jsonify({"status": "error", "message": str(e)}), 400
 
 @app.route("/smartpedals/api/users/<string:rfid>", methods=["PUT"])
+@require_api_key
 def update_user(rfid):
     update = request.get_json()
     # do not allow changing the rfid itself
@@ -595,6 +619,7 @@ def update_user(rfid):
         return jsonify({"status": "error", "message": str(e)}), 400
 
 @app.route("/smartpedals/api/users/<string:rfid>", methods=["DELETE"])
+@require_api_key
 def delete_user(rfid):
     result = users_col.delete_one({"rfid": rfid})
     if result.deleted_count:
@@ -603,6 +628,7 @@ def delete_user(rfid):
 
 # Bikes
 @app.route("/smartpedals/api/bikes", methods=["GET"])
+@require_api_key
 def list_bikes():
     docs = bikes_col.find()
     bikes = []
@@ -618,6 +644,7 @@ def list_bikes():
     return jsonify(bikes), 200
 
 @app.route("/smartpedals/api/bikes/<string:bike_id>", methods=["GET"])
+@require_api_key
 def get_bike(bike_id):
     d = bikes_col.find_one({"bike_id": bike_id})
     if not d:
@@ -633,6 +660,7 @@ def get_bike(bike_id):
     return jsonify(bike), 200
 
 @app.route("/smartpedals/api/bikes", methods=["POST"])
+@require_api_key
 def create_bike():
     bike_data = request.get_json()
 
@@ -662,6 +690,7 @@ def create_bike():
         return jsonify({"status": "error", "message": str(e)}), 400
 
 @app.route("/smartpedals/api/bikes/<string:bike_id>", methods=["PUT"])
+@require_api_key
 def update_bike(bike_id):
     update = request.get_json()
     update.pop("bike_id", None)
@@ -708,6 +737,7 @@ def update_bike(bike_id):
         return jsonify({"status": "error", "message": str(e)}), 400
 
 @app.route("/smartpedals/api/bikes/<string:bike_id>", methods=["DELETE"])
+@require_api_key
 def delete_bike(bike_id):
     bike = bikes_col.find_one({"bike_id": bike_id})
 
@@ -730,6 +760,7 @@ def delete_bike(bike_id):
 
 # Racks
 @app.route("/smartpedals/api/racks", methods=["GET"])
+@require_api_key
 def list_racks():
     docs = racks_col.find()
     racks = []
@@ -744,6 +775,7 @@ def list_racks():
     return jsonify(racks), 200
 
 @app.route("/smartpedals/api/racks/<string:rack_id>", methods=["GET"])
+@require_api_key
 def get_rack(rack_id):
     d = racks_col.find_one({"rack_id": rack_id})
     if not d:
@@ -758,6 +790,7 @@ def get_rack(rack_id):
     return jsonify(rack), 200
 
 @app.route("/smartpedals/api/racks", methods=["POST"])
+@require_api_key
 def create_rack():
     rack_data = request.get_json()
     rack_id = rack_data.get("rack_id")
@@ -783,6 +816,7 @@ def create_rack():
         return jsonify({"status": "error", "message": str(e)}), 400
 
 @app.route("/smartpedals/api/racks/<string:rack_id>", methods=["DELETE"])
+@require_api_key
 def delete_rack(rack_id):
     rack = racks_col.find_one({"rack_id": rack_id})
 
@@ -806,6 +840,7 @@ def delete_rack(rack_id):
 
 # Stations
 @app.route("/smartpedals/api/stations", methods=["GET"])
+@require_api_key
 def list_stations():
     docs = stations_col.find()
     stations = []
@@ -819,6 +854,7 @@ def list_stations():
     return jsonify(stations), 200
 
 @app.route("/smartpedals/api/stations/<string:station_id>", methods=["GET"])
+@require_api_key
 def get_station(station_id):
     d = stations_col.find_one({"station_id": station_id})
     if not d:
@@ -832,6 +868,7 @@ def get_station(station_id):
     return jsonify(station), 200
 
 @app.route("/smartpedals/api/stations", methods=["POST"])
+@require_api_key
 def create_station():
     station_data = request.get_json()
     try:
@@ -841,6 +878,7 @@ def create_station():
         return jsonify({"status": "error", "message": str(e)}), 400
 
 @app.route("/smartpedals/api/stations/<string:station_id>", methods=["DELETE"])
+@require_api_key
 def delete_station(station_id):
     # Check if there are racks in this station
     station = stations_col.find_one({"station_id": station_id})
@@ -863,6 +901,7 @@ def delete_station(station_id):
 
 # Locations
 @app.route("/smartpedals/api/locations", methods=["GET"])
+@require_api_key
 def list_locations():
     # Exclude _id -> bug in node red
     docs = locations_col.find({}, {"_id": 0})
