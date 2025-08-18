@@ -29,8 +29,8 @@
   <h2>API Plan Information</h2>
   {% if api_info %}
     <p><strong>Plan:</strong> {{ api_info.plan }}</p>
-    <p><strong>Query Credits:</strong> {{ api_info.usage_limits.query_credits }}</p>
-    <p><strong>Scan Credits:</strong> {{ api_info.usage_limits.scan_credits }}</p>
+    <p><strong>Query Credits:</strong> {{ api_info.query_credits }}</p>
+    <p><strong>Scan Credits:</strong> {{ api_info.scan_credits }}</p>
     <p><strong>HTTPS Support:</strong> {{ api_info.https }}</p>
   {% else %}
     <p>No data from Shodan API Info.</p>
@@ -38,26 +38,58 @@
 
   <!-- HEPL Public IP Lookup -->
   <h2>Lookup - HEPL Public IP</h2>
+  {% if local_pub_ip %}
+    <p><strong>Public IP:</strong> {{ local_pub_ip }}</p>
+  {% endif %}
   {% if hepl_info %}
     <p><strong>IP:</strong> {{ hepl_info.ip }}</p>
-    <p><strong>Organization:</strong> {{ hepl_info.org }}</p>
-    <p><strong>Country:</strong> {{ hepl_info.country_name }}</p>
-    <p><strong>ISP:</strong> {{ hepl_info.isp }}</p>
+    <p><strong>Organization:</strong> {{ hepl_info.org or "?" }}</p>
+    <p><strong>Country:</strong> {{ hepl_info.country_name or "?" }}</p>
+    <p><strong>ISP:</strong> {{ hepl_info.isp or "?" }}</p>
     <p><strong>Hostnames:</strong> {{ hepl_info.hostnames|join(", ") if hepl_info.hostnames else "(none)" }}</p>
   {% else %}
     <p>No data from Shodan HEPL lookup.</p>
   {% endif %}
 
+  <!-- Scan Local -->
+  <form method="post" action="{{ url_for('security_scan', target='local') }}" style="margin-top: 8px;">
+    <button type="submit">Scan Local</button>
+  </form>
+
   <!-- Mosquitto Public IP Lookup -->
   <h2>Lookup - test.mosquitto.org</h2>
-  {% if ip_info %}
-    <p><strong>IP:</strong> {{ ip_info.ip }}</p>
-    <p><strong>Organization:</strong> {{ ip_info.org or "?" }}</p>
-    <p><strong>Country:</strong> {{ ip_info.country_name or "?" }}</p>
-    <p><strong>ISP:</strong> {{ ip_info.isp or "?" }}</p>
-    <p><strong>Hostnames:</strong> {{ ip_info.hostnames|join(", ") if ip_info.hostnames else "(none)" }}</p>
+  {% if mosq_ip %}
+    <p><strong>Resolved IP:</strong> {{ mosq_ip }}</p>
+  {% endif %}
+  {% if mosq_info %}
+    <p><strong>IP:</strong> {{ mosq_info.ip }}</p>
+    <p><strong>Organization:</strong> {{ mosq_info.org or "?" }}</p>
+    <p><strong>Country:</strong> {{ mosq_info.country_name or "?" }}</p>
+    <p><strong>ISP:</strong> {{ mosq_info.isp or "?" }}</p>
+    <p><strong>Hostnames:</strong> {{ mosq_info.hostnames|join(", ") if mosq_info.hostnames else "(none)" }}</p>
   {% else %}
     <p>No data from Shodan host lookup.</p>
+  {% endif %}
+
+  <!-- Scan Mosquitto -->
+  <form method="post" action="{{ url_for('security_scan', target='mosq') }}" style="margin-top: 8px;">
+    <button type="submit">Scan Mosquitto</button>
+  </form>
+
+  <!-- Scans List -->
+  <h2>Scans (history)</h2>
+  {% if scans_list %}
+    <ul>
+      {% for s in scans_list %}
+        <li>
+          <strong>ID:</strong> {{ s.id or "?" }} |
+          <strong>Status:</strong> {{ s.status or "?" }} |
+          <strong>Created:</strong> {{ s.created or "?" }}
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>No scan history available (or not permitted by plan).</p>
   {% endif %}
 
   <!-- Debug -->
