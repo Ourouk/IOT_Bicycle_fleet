@@ -361,9 +361,10 @@ def handle_auth_response(payload):
     if payload.get('action') != pending_auth_action:
         debug_print(f"Auth response for wrong action: {payload.get('action')} != {pending_auth_action}")
         return
-    if payload.get('user_id') != pending_auth_user:
-        debug_print(f"Auth response for wrong user: {payload.get('user_id')} != {pending_auth_user}")
-        return
+    #TODO: Re-enabled when having custom rfid
+    # if payload.get('user_id') != pending_auth_user:
+    #     debug_print(f"Auth response for wrong user: {payload.get('user_id')} != {pending_auth_user}")
+    #     return
     last_auth_result = payload
     awaiting_auth = False
     debug_print(f"Auth response: {payload}")
