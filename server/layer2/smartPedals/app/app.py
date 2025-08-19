@@ -509,13 +509,25 @@ def on_message_ext(client, userdata, msg):
     global latest_disponibilities, latest_disponibilities_count
     try:
         payload = msg.payload.decode()
-        latest_disponibilities = payload
+        # latest_disponibilities = payload
 
-        # Regex to extract number
-        m = re.search(r"\d+", payload)
-        latest_disponibilities_count = int(m.group(0)) if m else None
+        # # Regex to extract number -> old way, without JSONPath (only message)
+        # m = re.search(r"\d+", payload)
+        # latest_disponibilities_count = int(m.group(0)) if m else None
+        
+        try:
+            # Try to parse as JSON
+            data = json.loads(payload)
+            latest_disponibilities = data.get("message", payload) # String
+            latest_disponibilities_count = data.get("availableBikes")  # Number
+            print(f"[EXT MQTT] {msg.topic}={payload} (count={latest_disponibilities_count})")
+        except json.JSONDecodeError:
+            # If not JSON, fallback to regex
+            latest_disponibilities = payload
+            m = re.search(r"\d+", payload)
+            latest_disponibilities_count = int(m.group(0)) if m else None
+            print(f"[EXT MQTT] {msg.topic}={payload} (fallback count={latest_disponibilities_count})")
 
-        print(f"[EXT MQTT] {msg.topic}={payload} (count={latest_disponibilities_count})")
         # Trigger alerts logic after we have the count
         if latest_disponibilities_count is not None:
             handle_disponibility_alerts(latest_disponibilities_count)
@@ -1148,51 +1160,145 @@ def security():
     hepl_info = None
     mosq_info = None
 
+    local_ip = None
+    mosq_ip = None
+
+    scan_mosq = None
+    scan_local = None
+    scan_mosq_status = None
+    scan_local_status = None
+
     if not SHODAN_API_KEY:
         app.logger.error("SHODAN_API_KEY not configured")
         flash("SHODAN_API_KEY not configured", "error")
         return render_template("security.html", api_info=None, hepl_info=None, mosq_info=None)
 
+    params_key = {"key": SHODAN_API_KEY}
+
     try:
         # Api info
         url_info = f"{SHODAN_API_BASE}/api-info"
-        params = {"key": SHODAN_API_KEY}
-        resp_info = requests.get(url_info, params=params, timeout=5)
+        resp_info = requests.get(url_info, params=params_key, timeout=5)
         resp_info.raise_for_status()
         api_info = resp_info.json()
     except requests.RequestException as e:
         app.logger.error(f"Error fetching Shodan API info: {e}")
         flash("Failed to fetch Shodan API information.", "error")
 
+    # Public IP via ipify
+    try:
+        local_pub_ip = requests.get("https://api.ipify.org", timeout=5).text.strip()
+    except requests.RequestException as e:
+        app.logger.error(f"Error fetching public IP: {e}")
+        flash("Failed to fetch public IP address.", "error")
+        
+
+    # Lookup local public IP
     try:
         # hepl info
-        url_hepl = f"{SHODAN_API_BASE}/shodan/host/{requests.get('https://api.ipify.org').text.strip()}"
-        resp_hepl = requests.get(url_hepl, params=params, timeout=10)
+        # url_hepl = f"{SHODAN_API_BASE}/shodan/host/{requests.get('https://api.ipify.org').text.strip()}"
+        url_hepl = f"{SHODAN_API_BASE}/shodan/host/{local_pub_ip}"
+        resp_hepl = requests.get(url_hepl, params=params_key, timeout=10)
         app.logger.info(f"HEPL lookup response: {resp_hepl.status_code} - {resp_hepl.text}")
         # Handle specific status codes
         if resp_hepl.status_code in (401, 403):
             flash(f"HEPL lookup blocked by Shodan plan (HTTP {resp_hepl.status_code}).", "warning")
         resp_hepl.raise_for_status()
         hepl_info = resp_hepl.json()
+        if "error" in hepl_info:
+            flash(f"HEPL lookup: {hepl_info['error']}", "warning")
     except requests.RequestException as e:
         app.logger.error(f"Error fetching Shodan HEPL info: {e}")
         flash("Failed to fetch Shodan HEPL information.", "error")
 
+    # DNS resolve test.mosquitto.org to get its IP
     try:
-        # test.mosquitto.org info
-        url_mosq = f"{SHODAN_API_BASE}/shodan/host/test.mosquitto.org"
-        resp_mosq = requests.get(url_mosq, params=params, timeout=10)
-        app.logger.info(f"MQTT lookup response: {resp_mosq.status_code} - {resp_mosq.text}")
-        # Handle specific status codes
-        if resp_mosq.status_code in (401, 403):
-            flash(f"MQTT lookup blocked by Shodan plan (HTTP {resp_mosq.status_code}).", "warning")
-        resp_mosq.raise_for_status()
-        mosq_info = resp_host.json()
+        url_dns = f"{SHODAN_API_BASE}/dns/resolve"
+        resp_dns = requests.get(url_dns, params={"hostnames": "test.mosquitto.org", "key": SHODAN_API_KEY}, timeout=10)
+        # app.logger.info(f"DNS resolve response: {resp_dns.status_code} - {resp_dns.text[:200]}")
+        resp_dns.raise_for_status()
+        mosq_ip = resp_dns.json().get("test.mosquitto.org")
+        if not mosq_ip:
+            flash("Shodan DNS resolve returned no IP for test.mosquitto.org.", "warning")
     except requests.RequestException as e:
-        app.logger.error(f"Error fetching Shodan MQTT info: {e}")
-        flash("Failed to fetch Shodan MQTT information.", "error")
+        app.logger.error(f"Error resolving test.mosquitto.org: {e}")
+        flash("Failed to resolve test.mosquitto.org.", "error")
 
-    return render_template("security.html", api_info=api_info, hepl_info=hepl_info, mosq_info=mosq_info)
+    # Lookup test.mosquitto.org
+    if mosq_ip:
+        try:
+            # mosq info
+            url_host = f"{SHODAN_API_BASE}/shodan/host/{mosq_ip}"
+            resp_host = requests.get(url_host, params=params_key, timeout=10)
+            # app.logger.info(f"Mosquitto lookup response: {resp_host.status_code} - {resp_host.text}")
+            # Handle specific status codes
+            if resp_host.status_code in (401, 403):
+                flash(f"Mosquitto lookup blocked by Shodan plan (HTTP {resp_host.status_code}).", "warning")
+            resp_host.raise_for_status()
+            mosq_info = resp_host.json()
+            if "error" in mosq_info:
+                flash(f"Mosquitto lookup: {mosq_info['error']}", "warning")
+        except requests.RequestException as e:
+            app.logger.error(f"Error fetching Shodan Mosquitto info: {e}")
+            flash("Failed to fetch Shodan Mosquitto information.", "error")
+
+    # list scans
+    try:
+        url_scans = f"{SHODAN_API_BASE}/shodan/scans"
+        resp_scans = requests.get(url_scans, params=params_key, timeout=20)
+        if resp_scans.status_code in (401, 403):
+            flash(f"Listing scans blocked by Shodan plan (HTTP {resp_scans.status_code}).", "warning")
+        resp_scans.raise_for_status()
+        data = resp_scans.json()
+        scans_list = data.get("matches", [])  # Extract matches from the response
+        # app.logger.info(f"Scans list response: {resp_scans.status_code} - {scans_list}")
+    except requests.RequestException as e:
+        app.logger.error(f"Error listing Shodan scans: {e}")
+
+    return render_template("security.html", api_info=api_info, local_pub_ip=local_pub_ip, hepl_info=hepl_info, mosq_ip=mosq_ip, mosq_info=mosq_info, scans_list=scans_list)
+
+@app.route("/smartpedals/scan/<target>", methods=["POST"])
+def security_scan(target):
+    if not SHODAN_API_KEY:
+        flash("SHODAN_API_KEY not configured", "error")
+        return redirect(url_for("security"))
+
+    params_key = {"key": SHODAN_API_KEY}
+
+    # Determine target IP
+    ip_to_scan = None
+    if target == "local":
+        try:
+            ip_to_scan = requests.get("https://api.ipify.org", timeout=5).text.strip()
+        except:
+            flash("Could not determine public IP.", "error")
+    elif target == "mosq":
+        try:
+            url_dns = f"{SHODAN_API_BASE}/dns/resolve"
+            resp_dns = requests.get(url_dns, params={"hostnames": "test.mosquitto.org", "key": SHODAN_API_KEY}, timeout=5)
+            resp_dns.raise_for_status()
+            ip_to_scan = resp_dns.json().get("test.mosquitto.org")
+        except:
+            flash("Could not resolve test.mosquitto.org.", "error")
+
+    if not ip_to_scan:
+        flash(f"No IP found for {target}.", "error")
+        return redirect(url_for("security"))
+
+    # Submit scan
+    try:
+        url_scan = f"{SHODAN_API_BASE}/shodan/scan"
+        resp_scan = requests.post(url_scan, params=params_key, json={"ips": ip_to_scan}, timeout=15)
+        if resp_scan.status_code in (401, 403):
+            flash(f"Scan blocked by Shodan plan (HTTP {resp_scan.status_code}).", "warning")
+        resp_scan.raise_for_status()
+        scan_result = resp_scan.json()
+        flash(f"Scan submitted for {ip_to_scan}. Scan ID: {scan_result.get('id')}", "info")
+    except requests.RequestException as e:
+        app.logger.error(f"Error submitting scan for {ip_to_scan}: {e}")
+        flash(f"Failed to submit scan for {ip_to_scan}.", "error")
+
+    return redirect(url_for("security"))
 
 if __name__ == "__main__":
     # app.run(debug=True, use_reloader=False, threaded=True, host="0.0.0.0")

@@ -222,6 +222,30 @@
         "h": 222
     },
     {
+        "id": "878b3cf3372730d2",
+        "type": "group",
+        "z": "f8bc54da016b7352",
+        "name": "smartpedalsDB",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "3c0e30964d42fa39",
+            "49ec62c9a9d4178f",
+            "59c5426826805894",
+            "85d8d00ea438e9dd",
+            "49c8d86960664c3e",
+            "fc3ab5a1626e039d",
+            "a09bef8673514ebd",
+            "231464231b7cfc75",
+            "3a800bcbf58f1fac"
+        ],
+        "x": 1454,
+        "y": 1019,
+        "w": 772,
+        "h": 262
+    },
+    {
         "id": "156e55908398abf2",
         "type": "group",
         "z": "f8bc54da016b7352",
@@ -262,30 +286,6 @@
         "y": 619,
         "w": 432,
         "h": 122
-    },
-    {
-        "id": "878b3cf3372730d2",
-        "type": "group",
-        "z": "f8bc54da016b7352",
-        "name": "smartpedalsDB",
-        "style": {
-            "label": true
-        },
-        "nodes": [
-            "3c0e30964d42fa39",
-            "49ec62c9a9d4178f",
-            "59c5426826805894",
-            "85d8d00ea438e9dd",
-            "49c8d86960664c3e",
-            "fc3ab5a1626e039d",
-            "a09bef8673514ebd",
-            "231464231b7cfc75",
-            "3a800bcbf58f1fac"
-        ],
-        "x": 1454,
-        "y": 1019,
-        "w": 772,
-        "h": 262
     },
     {
         "id": "5a1477eb81ac255d",
@@ -2482,7 +2482,7 @@
         "z": "f8bc54da016b7352",
         "g": "ce7103cf8fb8ffd3",
         "name": "Count Bikes",
-        "func": "const rows = Array.isArray(msg.payload) ? msg.payload : [];\nconst availableCount = rows.filter(b => (b?.status ?? \"\").toLowerCase() !== \"in_use\").length;\n\n// Formate en anglais avec pluriel\nmsg.payload = `There ${availableCount === 1 ? \"is\" : \"are\"} ${availableCount} available bike${availableCount === 1 ? \"\" : \"s\"}`;\nmsg.topic = \"hepl/disponibilities\";\n\n// Save last data\nmsg.retain = true;\nreturn msg;\n",
+        "func": "const rows = Array.isArray(msg.payload) ? msg.payload : [];\nconst availableCount = rows.filter(b => (b?.status ?? \"\").toLowerCase() !== \"in_use\").length;\n\n// Formate en anglais avec pluriel\n//msg.payload = `There ${availableCount === 1 ? \"is\" : \"are\"} ${availableCount} available bike${availableCount === 1 ? \"\" : \"s\"}`;\n\nmsg.payload = {\n    message: `There ${availableCount === 1 ? \"is\" : \"are\"} ${availableCount} available bike${availableCount === 1 ? \"\" : \"s\"}`,\n    availableBikes: availableCount\n};\n\nmsg.topic = \"hepl/disponibilities\";\n\n// Save last data\nmsg.retain = true;\nreturn msg;\n",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
@@ -3199,8 +3199,8 @@
         "mapurl": "",
         "mapopt": "",
         "mapwms": false,
-        "x": 760,
-        "y": 200,
+        "x": 1440,
+        "y": 220,
         "wires": []
     },
     {
@@ -3252,7 +3252,7 @@
         "wires": [
             [
                 "3d769ece20c467fa",
-                "bd4c65845b708a95"
+                "6e2948b4d1dc628e"
             ]
         ]
     },
@@ -3262,7 +3262,7 @@
         "z": "96c3cda21b90f5d3",
         "g": "adf31f5d4620e8e5",
         "name": "List locations",
-        "active": false,
+        "active": true,
         "tosidebar": true,
         "console": false,
         "tostatus": false,
@@ -3308,18 +3308,180 @@
         "type": "function",
         "z": "96c3cda21b90f5d3",
         "name": "Bikes Positions",
-        "func": "const PALETTE = [\n  \"#e6194B\", \"#3cb44b\", \"#ffe119\", \"#4363d8\", \"#f58231\",\n  \"#911eb4\", \"#42d4f4\", \"#f032e6\", \"#bfef45\", \"#fabed4\",\n  \"#469990\", \"#dcbeff\", \"#9A6324\", \"#fffac8\", \"#800000\",\n  \"#aaffc3\", \"#808000\", \"#ffd8b1\", \"#000075\", \"#a9a9a9\"\n];\n\nfunction getColorFromString(str) {\n  // FNV-1a\n  let h = 2166136261;\n  for (let i = 0; i < str.length; i++) {\n    h ^= str.charCodeAt(i);\n    h = Math.imul(h, 16777619);\n  }\n  const idx = (h >>> 0) % PALETTE.length;\n  return PALETTE[idx];\n}\n\n// Main function to process the bike locations\nfunction processBikeLocations(msg) {\n  const rows = Array.isArray(msg.payload) ? msg.payload : [];\n  const perBike = new Map();\n\n  // Group locations by bikeId\n  rows.forEach((location) => {\n    if (!location || !location.bike_id || !location.coordinates) return;\n\n    const lat = parseFloat(location.coordinates.lat);\n    const lon = parseFloat(location.coordinates.lon);\n    if (isNaN(lat) || isNaN(lon)) return;\n\n    const ts = new Date(location.timestamp);\n    if (isNaN(ts.getTime())) return;\n\n    if (!perBike.has(location.bike_id)) {\n      perBike.set(location.bike_id, []);\n    }\n    perBike.get(location.bike_id).push({ bike_id: location.bike_id, lat, lon, ts });\n  });\n\n  // Process each bike's locations\n  perBike.forEach((locations, bike_id) => {\n    const sortedLocations = locations\n      .sort((a, b) => a.ts - b.ts)\n      .slice(-10); // Get the last 10 locations\n\n    if (sortedLocations.length === 0) return;\n\n    const color = getColorFromString(bike_id);\n\n    // Send the polyline for the bike's track\n    const line = sortedLocations.map((p) => [p.lat, p.lon]);\n    node.send({\n      payload: {\n        name: `${bike_id}-track`,\n        line,\n        color,\n        weight: 3,\n        opacity: 0.85,\n        layer: \"bikes\",\n      },\n    });\n\n    // Send trail dots for all but the latest point\n    for (let i = 0; i < sortedLocations.length - 1; i++) {\n      const p = sortedLocations[i];\n      const fillOpacity = 0.2 + (i / Math.max(1, sortedLocations.length - 2)) * 0.5;\n      node.send({\n        payload: {\n          name: `${bike_id}#trail${i}`,\n          lat: p.lat,\n          lon: p.lon,\n          radius: 7,\n          color,\n          fillColor: color,\n          opacity: fillOpacity,\n          fillOpacity,\n          layer: \"bikes\",\n        },\n      });\n    }\n\n    // Send the latest point as a bicycle icon\n    const last = sortedLocations[sortedLocations.length - 1];\n    node.send({\n      payload: {\n        name: `${bike_id}#latest`,\n        lat: last.lat,\n        lon: last.lon,\n        icon: \"bicycle\",\n        iconColor: color,\n        color,\n        layer: \"bikes\",\n      },\n    });\n  });\n\n  // Fit the map to the bounds of the \"bikes\" layer\n  node.send({ payload: { command: \"fit\", layer: \"bikes\" } });\n  return null;\n}\n\n// Call the function with the msg object provided by Node-RED\nprocessBikeLocations(msg);\n",
+        "func": "const PALETTE = [\n  \"#e6194B\", \"#3cb44b\", \"#ffe119\", \"#4363d8\", \"#f58231\",\n  \"#911eb4\", \"#42d4f4\", \"#f032e6\", \"#bfef45\", \"#fabed4\",\n  \"#469990\", \"#dcbeff\", \"#9A6324\", \"#fffac8\", \"#800000\",\n  \"#aaffc3\", \"#808000\", \"#ffd8b1\", \"#000075\", \"#a9a9a9\"\n];\n\nfunction getColorFromString(str) {\n  // FNV-1a\n  let h = 2166136261;\n  for (let i = 0; i < str.length; i++) {\n    h ^= str.charCodeAt(i);\n    h = Math.imul(h, 16777619);\n  }\n  const idx = (h >>> 0) % PALETTE.length;\n  return PALETTE[idx];\n}\n\n// Main function to process the bike locations\nfunction processBikeLocations(msg) {\n  const rows = Array.isArray(msg.payload) ? msg.payload : [];\n  node.send({ payload: { command: { clear: \"bikes\" } } });\n  const perBike = new Map();\n\n  // Group locations by bikeId\n  rows.forEach((location) => {\n    if (!location || !location.bike_id || !location.coordinates) return;\n\n    const lat = parseFloat(location.coordinates.lat);\n    const lon = parseFloat(location.coordinates.lon);\n    if (isNaN(lat) || isNaN(lon)) return;\n\n    const ts = new Date(location.timestamp);\n    if (isNaN(ts.getTime())) return;\n\n    if (!perBike.has(location.bike_id)) {\n      perBike.set(location.bike_id, []);\n    }\n    perBike.get(location.bike_id).push({ bike_id: location.bike_id, lat, lon, ts });\n  });\n\n  // Process each bike's locations\n  perBike.forEach((locations, bike_id) => {\n    const sortedLocations = locations\n      .sort((a, b) => a.ts - b.ts)\n      .slice(-10); // Get the last 10 locations\n\n    if (sortedLocations.length === 0) return;\n\n    const color = getColorFromString(bike_id);\n\n    // Send the polyline for the bike's track\n    const line = sortedLocations.map((p) => [p.lat, p.lon]);\n    node.send({\n      payload: {\n        name: `${bike_id}-track`,\n        line,\n        color,\n        weight: 3,\n        opacity: 0.85,\n        layer: \"bikes\",\n      },\n    });\n\n    // Send trail dots for all but the latest point\n    for (let i = 0; i < sortedLocations.length - 1; i++) {\n      const p = sortedLocations[i];\n      const fillOpacity = 0.2 + (i / Math.max(1, sortedLocations.length - 2)) * 0.5;\n      node.send({\n        payload: {\n          name: `${bike_id}#trail${i}`,\n          lat: p.lat,\n          lon: p.lon,\n          radius: 7,\n          color,\n          fillColor: color,\n          opacity: fillOpacity,\n          fillOpacity,\n          layer: \"bikes\",\n        },\n      });\n    }\n\n    // Send the latest point as a bicycle icon\n    const last = sortedLocations[sortedLocations.length - 1];\n    node.send({\n      payload: {\n        name: `${bike_id}#latest`,\n        lat: last.lat,\n        lon: last.lon,\n        icon: \"bicycle\",\n        iconColor: color,\n        color,\n        layer: \"bikes\",\n      },\n    });\n  });\n\n  // Fit the map to the bounds of the \"bikes\" layer\n  node.send({ payload: { command: \"fit\", layer: \"bikes\" } });\n  return null;\n}\n\n// Call the function with the msg object provided by Node-RED\nprocessBikeLocations(msg);\n",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 600,
-        "y": 200,
+        "x": 1260,
+        "y": 220,
         "wires": [
             [
                 "bf779d9e7c32b47d"
+            ]
+        ]
+    },
+    {
+        "id": "c4b5ee8a7ac4a2cf",
+        "type": "ui_dropdown",
+        "z": "96c3cda21b90f5d3",
+        "name": "",
+        "label": "Select Bike ID:",
+        "tooltip": "",
+        "place": "Select option",
+        "group": "641b5e8937934ab6",
+        "order": 2,
+        "width": "18",
+        "height": "1",
+        "passthru": true,
+        "multiple": false,
+        "options": [],
+        "payload": "",
+        "topic": "options",
+        "topicType": "msg",
+        "className": "",
+        "x": 760,
+        "y": 200,
+        "wires": [
+            [
+                "e26b83b12d88dd0c"
+            ]
+        ]
+    },
+    {
+        "id": "36cdb127b57f32b1",
+        "type": "ui_slider",
+        "z": "96c3cda21b90f5d3",
+        "name": "",
+        "label": "Time Line",
+        "tooltip": "",
+        "group": "641b5e8937934ab6",
+        "order": 3,
+        "width": 0,
+        "height": 0,
+        "passthru": true,
+        "outs": "all",
+        "topic": "topic",
+        "topicType": "msg",
+        "min": 0,
+        "max": 10,
+        "step": 1,
+        "className": "",
+        "x": 740,
+        "y": 240,
+        "wires": [
+            [
+                "b1920b1a0641aeb4"
+            ]
+        ]
+    },
+    {
+        "id": "6e2948b4d1dc628e",
+        "type": "change",
+        "z": "96c3cda21b90f5d3",
+        "name": "",
+        "rules": [
+            {
+                "t": "set",
+                "p": "originalData",
+                "pt": "flow",
+                "to": "payload",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 280,
+        "y": 200,
+        "wires": [
+            [
+                "3b3a6a28afb41dc4",
+                "da6cf6d81b18885b"
+            ]
+        ]
+    },
+    {
+        "id": "3b3a6a28afb41dc4",
+        "type": "function",
+        "z": "96c3cda21b90f5d3",
+        "name": "Extract bike_id",
+        "func": "// Extract unique bike_ids from the payload\nconst payload = msg.payload;\nconst bikeIds = [...new Set(payload.map(item => item.bike_id))];\n\n// Add \"All\" as the first option\nbikeIds.unshift(\"All\");\n\n// Format as an array of strings (label = value)\nmsg.options = bikeIds;\nmsg.payload = \"All\"; // Start with all bikes displayed\n\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 500,
+        "y": 200,
+        "wires": [
+            [
+                "c4b5ee8a7ac4a2cf"
+            ]
+        ]
+    },
+    {
+        "id": "e26b83b12d88dd0c",
+        "type": "function",
+        "z": "96c3cda21b90f5d3",
+        "name": "Filter Data Based on Selection",
+        "func": "// Get the selected bike_id from the dropdown\nconst selectedBikeId = msg.payload;\n\n// Get the original data from flow context\nconst originalData = flow.get(\"originalData\") || [];\n\n// Filter data based on the selected bike_id\nlet filteredData;\nif (selectedBikeId === \"All\") {\n    filteredData = originalData;\n} else {\n    filteredData = originalData.filter(item => item.bike_id === selectedBikeId);\n}\n\n// Send filtered data to the worldmap function\nmsg.payload = filteredData;\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1010,
+        "y": 200,
+        "wires": [
+            [
+                "bd4c65845b708a95"
+            ]
+        ]
+    },
+    {
+        "id": "da6cf6d81b18885b",
+        "type": "function",
+        "z": "96c3cda21b90f5d3",
+        "name": "Extract Timestamp Range",
+        "func": "const payload = msg.payload;\nconst timestamps = payload.map(item => new Date(item.timestamp).getTime());\nconst minTime = Math.min(...timestamps);\nconst maxTime = Math.max(...timestamps);\n\n// Store min and max timestamps in flow context\nflow.set(\"minTime\", minTime);\nflow.set(\"maxTime\", maxTime);\n\n// Set initial slider value to maxTime (most recent)\nmsg.payload = maxTime;\n\n// Configure slider dynamically using msg.ui_control\nmsg.ui_control = {\n    min: minTime,\n    max: maxTime,\n    step: 60000  // 1 minute in milliseconds\n};\n\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 530,
+        "y": 240,
+        "wires": [
+            [
+                "36cdb127b57f32b1"
+            ]
+        ]
+    },
+    {
+        "id": "b1920b1a0641aeb4",
+        "type": "function",
+        "z": "96c3cda21b90f5d3",
+        "name": "Filter Data Based on Slider",
+        "func": "const selectedTime = msg.payload;\nflow.set(\"selectedTime\", selectedTime);\n\nconst selectedBikeId = flow.get(\"selectedBikeId\") || \"All\";\nconst originalData = flow.get(\"originalData\") || [];\n\nlet filteredData;\nif (selectedBikeId === \"All\") {\n    filteredData = originalData.filter(item => new Date(item.timestamp).getTime() <= selectedTime);\n} else {\n    filteredData = originalData.filter(item =>\n        item.bike_id === selectedBikeId && new Date(item.timestamp).getTime() <= selectedTime\n    );\n}\n\nmsg.payload = filteredData;\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1000,
+        "y": 240,
+        "wires": [
+            [
+                "bd4c65845b708a95"
             ]
         ]
     }

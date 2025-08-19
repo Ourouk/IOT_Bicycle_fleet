@@ -38,7 +38,10 @@
                 }
             },
             "keymap": {
-                "core:show-action-list": null
+                "core:show-action-list": {
+                    "scope": "*",
+                    "key": "ctrl-shift-a"
+                }
             }
         },
         "menu-menu-item-palette": true
