@@ -35,7 +35,7 @@ from time import sleep_us
 
 # ========== CONFIGURATION ==========
 # Identifiers
-DEVICE_ID = "r01"  # Rack ID shown to the server and logs
+DEVICE_ID = "1"  # Rack ID shown to the server and logs
 
 # WiFi credentials (AP provided by site router or hotspot)
 SSID = "RPiStation01"
