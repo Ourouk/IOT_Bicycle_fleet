@@ -250,11 +250,15 @@ def handle_auth_message(mqtt_client_instance, payload):
         user_id = data.get("user_id")
         bike_id = data.get("bike_id")
         rack_id = data.get("rack_id")
-        action  = data.get("type") or data.get("action")
-        ts_str  = data.get("timestamp")
+        # action = data.get("type") or data.get("action") # receive smth different now ...
+        action = data.get("action")
+        action_type = data.get("type")  # 'lock' or 'unlock'
+        ts_str = data.get("timestamp")
 
         # Check if all required fields are present
-        if not all([user_id, bike_id, rack_id, action, ts_str]):
+        # if not all([user_id, bike_id, rack_id, action, ts_str]):
+        # if not all([user_id, rack_id, action, ts_str]): # bike_id is optional for lock action
+        if not all([user_id, rack_id, ts_str]): # bike_id is optional for lock action
             return send_deny("Missing fields")
 
         # Check user
@@ -263,9 +267,9 @@ def handle_auth_message(mqtt_client_instance, payload):
             return send_deny(f"Unknown user {user_id}")
 
         # Check bike
-        bike_doc = bikes_col.find_one({"bike_id": str(bike_id)})
-        if not bike_doc:
-            return send_deny(f"No bike found in rack {rack_id}")
+        # bike_doc = bikes_col.find_one({"bike_id": str(bike_id)})
+        # if not bike_doc:
+        #     return send_deny(f"No bike found in rack {rack_id}")
 
         # Check timestamp
         try:
@@ -274,13 +278,17 @@ def handle_auth_message(mqtt_client_instance, payload):
                 ts_msg = ts_msg.replace(tzinfo=BRUSSELS)
             skew = abs((now - ts_msg).total_seconds())
         except Exception:
-            return send_deny(f"Invalid timestamp format {ts_str}")
+            app.logger.info(f"[AUTH] Invalid timestamp format: {ts_str}, improvement point")
+            pass
+            # return send_deny(f"Invalid timestamp format {ts_str}")
 
-        if skew > AUTH_MAX_SKEW_SECONDS:
-            return send_deny(f"Timestamp skew too large ({skew:.1f}s)")
+        # if skew > AUTH_MAX_SKEW_SECONDS:
+        #     app.logger.info(f"[AUTH] Timestamp skew too large: {skew:.1f}s (max {AUTH_MAX_SKEW_SECONDS}s), improvement point")
+        #     return send_deny(f"Timestamp skew too large ({skew:.1f}s)")
 
         # Get rack and station_id for the reply
         rack_doc = racks_col.find_one({"rack_id": str(rack_id)})
+        app.logger.info(f"[AUTH] Rack doc: {rack_doc}")
         station_id = str(rack_doc.get("station_id")) if rack_doc else None
 
         # Action: unlock
@@ -349,26 +357,26 @@ def handle_auth_message(mqtt_client_instance, payload):
 
         # Action: lock
         if action == "lock":
-            update_bike = bikes_col.update_one(
-                {"bike_id": str(bike_id), "status": "in_use", "currentUser": str(user_id)},
-                {"$set": {"status": "available", "currentUser": None, "currentRack": str(rack_id)},
-                "$push": {"history": {"action": "lock", "user_id": str(user_id), "timestamp": now}}}
-            )
-            if update_bike.modified_count == 0:
-                return send_deny(f"Lock denied for user={user_id} bike={bike_id} (not in use by this user)")
+            # update_bike = bikes_col.update_one(
+            #     {"bike_id": str(bike_id), "status": "in_use", "currentUser": str(user_id)},
+            #     {"$set": {"status": "available", "currentUser": None, "currentRack": str(rack_id)},
+            #     "$push": {"history": {"action": "lock", "user_id": str(user_id), "timestamp": now}}}
+            # )
+            # if update_bike.modified_count == 0:
+            #     return send_deny(f"Lock denied for user={user_id} bike={bike_id} (not in use by this user)")
 
             update_rack = racks_col.update_one(
                 {"rack_id": str(rack_id), "currentBike": None},
                 {"$set": {"currentBike": str(bike_id)},
                 "$push": {"history": {"bike_id": str(bike_id), "action": "lock", "timestamp": now}}}
             )
-            if update_rack.modified_count == 0:
-                bikes_col.update_one(
-                    {"bike_id": str(bike_id), "status": "available", "currentUser": None, "currentRack": str(rack_id)},
-                    {"$set": {"status": "in_use", "currentUser": str(user_id), "currentRack": None},
-                    "$push": {"history": {"action": "lock_rollback", "user_id": str(user_id), "timestamp": now}}}
-                )
-                return send_deny(f"Rack busy/missing for rack={rack_id} bike={bike_id} [rollback ok]")
+            # if update_rack.modified_count == 0:
+            #     bikes_col.update_one(
+            #         {"bike_id": str(bike_id), "status": "available", "currentUser": None, "currentRack": str(rack_id)},
+            #         {"$set": {"status": "in_use", "currentUser": str(user_id), "currentRack": None},
+            #         "$push": {"history": {"action": "lock_rollback", "user_id": str(user_id), "timestamp": now}}}
+            #     )
+            #     return send_deny(f"Rack busy/missing for rack={rack_id} bike={bike_id} [rollback ok]")
 
             users_col.update_one(
                 {"rfid": str(user_id)},

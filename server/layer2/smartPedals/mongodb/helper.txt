@@ -1,0 +1,1 @@
+db.locations.updateMany({bike_id: "bike002"}, [{$set: {timestamp: {$add: ["$timestamp", 24*60*60*1000]}}}]);
