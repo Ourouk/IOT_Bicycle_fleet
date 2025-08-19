@@ -11,7 +11,6 @@
 // For a connection via I2C using the Arduino Wire include:
 #include <Wire.h>               
 #include "HT_SSD1306Wire.h"
-#include "images.h"
 
 static SSD1306Wire  display(0x3c, 500000, SDA_OLED, SCL_OLED, GEOMETRY_128_64, RST_OLED); // addr , freq , i2c group , resolution , rst
 
@@ -46,7 +45,7 @@ bool lora_idle = true;                 // Indicates if LoRa is ready for a new t
 static RadioEvents_t RadioEvents;      // Radio event handler structure
 
 // ========================== LoRa Message Configuration =================
-#define LoRa_GPS_Interval 60000 // Interval to send GPS data in ms
+#define LoRa_GPS_Interval 30000 // Interval to send GPS data in ms
 #define LoRa_Lock_Status_EventDriven true // Send lock status only when changed
 #define LoRa_Lock_Status_Interval 300000  // Interval to send lock status in ms ONLY USED IF LoRa_Lock_Status_EventDriven IS FALSE
 // Associated var
