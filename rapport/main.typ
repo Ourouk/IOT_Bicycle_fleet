@@ -1,4 +1,5 @@
 #import "template.typ": *
+#import "@preview/tablem:0.3.0": tablem, three-line-table
 
 #show: project.with(
   course-title: "IOT",
@@ -89,7 +90,9 @@ Les flows sont disponnibles sur le github /raspberry/root/home/pi/.nodered
     )
 )
 == Communication LoRa RaspberryPI - Heltec Lora V3
+Pour limiter la taille des packets, nous utilisons un petit protocole simpliste similaire à du csv.
 
+Le tout crypter avec du AES-ECB (Nous connaissons le fait que ce chiffrement n'est plus recommander mais nous l'avons tout de même utilisé )
 == Matériel sur station (ESP32 Wifi)
 
 
@@ -102,9 +105,9 @@ Pour gérer les communications entre les objets embarqués et les serveurs, nous
 
 - Pour simplifier la lisibilité et le traitement des informations encodées, les antennes RPI communique avec le serveur L2 en utilisant du json
   - Example bike communication
-  ```
+  ```json
   {
-    "device_id": 1,
+    "bike_id": 1,
     "type": "location",
     "timestamp": "2023-10-01T12:00:00Z",
     "satellites":3,
@@ -119,16 +122,20 @@ Pour gérer les communications entre les objets embarqués et les serveurs, nous
 ```json
   {
     "bike_id": 1,
+    "rack_id": 1,
+    "station_id": 1,
     "type": "auth",
-    "action": "unlock"
-    "user_id": "andrea98"
+    "action": "unlock",
+    "user_id": "andrea98",
     "timestamp": "2023-10-01T12:00:00Z",
   }
   {
     "bike_id": 1,
+    "rack_id": 1,
+    "station_id": 1,
     "type": "auth",
-    "action": "lock"
-    "user_id": "andrea98"
+    "action": "lock",
+    "user_id": "andrea98",
     "timestamp": "2023-10-01T12:00:00Z",
   }
 ```
@@ -175,15 +182,49 @@ Pour gérer les communications entre les objets embarqués et les serveurs, nous
 == Broker public MQTT
 
 = Note d'amélioration
-== RPI 
-La version de raspian utilisée n'est plus supportée et ne recçois plus de mise à jour de sécurité depuis le 30 Juin 2022. #cite(<noauthor_debian_nodate>)
-
-De ce problème d'autre émerge la version de nodered n'est plus supportée, et tous les outils systèmes n'ont eu aucun patch de sécurité appliqué.
-
-Heureusement le problème est mitigé par l'absence de connection directe à Internet
-
-Solutions :
-  - Mise à jour vers rapsiban buster
-  - Hébergement d'un repo sur le serveur L2 pour proposé les mise à jour à la flotte d'antenne. 
-  - Se débarasser de grovePI et utiliser un esp/arduino à la place.
-
+== Général 
+#tablem[
+  | Appareil | Courant moyen | Puissance (≈5 V) | Énergie/jour | Remarques clés |
+|---|---:|---:|---:|---|
+| Heltec ESP32 LoRa v3 |
+| ESP32‑WROOM | ~150 mA | ~0,75 W | ~0,018 kWh | Wi‑Fi = principal levier; RFID ~20 mA; relais selon duty |
+| Raspberry Pi | 740–960 mA | 3,7–4,8 W | 0,089–0,115 kWh | Pi 4B ≈4,5–4,8 W; ventilateur ~1 W |
+]
+== RPI
+#tablem[
+| Sous-ensemble | Courant |
+|---|---:|
+| Carte ESP32 (base) | ~110 mA |
+| LoRa en écoute | +5 mA |
+| LoRa émission (0,1 s/30 s) | +0,4 mA (moyenne) |
+| GPS Adafruit | +22 mA |
+| Capteur de lumière | +1 mA |
+| OLED embarqué | +2 mA |
+| LED (occasionnelle) | +0,2 mA |
+| Relais (ex. 10 % du temps) | +7 mA |
+| Total arrondi | 140–150 mA |
+]
+== ESP32‑WROOM
+#tablem[
+  | Sous-ensemble | Courant |
+|---|---:|
+| ESP32 (Wi‑Fi perpétuel) | ~120 mA |
+| RFID (MFRC522) | +20 mA |
+| LED (1 ON + 1 occasionnelle) | +2,2 mA |
+| Relais (ex. 10 % du temps) | +7 mA |
+| Ultrason (rare) | +0,8 mA |
+| Total arrondi | ~150 mA |
+]
+== Heltech ESP32 LoRa V3
+#tablem[
+  | Variante | Puissance |
+|---|---:|
+| Pi 3B+ (repos typique) | ~1,9 W |
+| Pi 4B (repos typique) | ~2,7 W |
+| AP Wi‑Fi (charge légère) | +0,3–0,7 W |
+| LoRa HAT (Rx) | +0,06 W |
+| Grove LCD (rétroéclairage) | +0,3 W |
+| Ventilateur 5 V | +1,0 W |
+| Autres (GrovePI, boutons, encodeur) | +faible |
+| Total Pi 4B | ~4,5–4,8 W |
+]
