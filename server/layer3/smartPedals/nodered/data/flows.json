@@ -3308,7 +3308,7 @@
         "type": "function",
         "z": "96c3cda21b90f5d3",
         "name": "Bikes Positions",
-        "func": "const PALETTE = [\n  \"#e6194B\", \"#3cb44b\", \"#ffe119\", \"#4363d8\", \"#f58231\",\n  \"#911eb4\", \"#42d4f4\", \"#f032e6\", \"#bfef45\", \"#fabed4\",\n  \"#469990\", \"#dcbeff\", \"#9A6324\", \"#fffac8\", \"#800000\",\n  \"#aaffc3\", \"#808000\", \"#ffd8b1\", \"#000075\", \"#a9a9a9\"\n];\n\nfunction getColorFromString(str) {\n  // FNV-1a\n  let h = 2166136261;\n  for (let i = 0; i < str.length; i++) {\n    h ^= str.charCodeAt(i);\n    h = Math.imul(h, 16777619);\n  }\n  const idx = (h >>> 0) % PALETTE.length;\n  return PALETTE[idx];\n}\n\n// Main function to process the bike locations\nfunction processBikeLocations(msg) {\n  const rows = Array.isArray(msg.payload) ? msg.payload : [];\n  node.send({ payload: { command: { clear: \"bikes\" } } });\n  const perBike = new Map();\n\n  // Group locations by bikeId\n  rows.forEach((location) => {\n    if (!location || !location.bike_id || !location.coordinates) return;\n\n    const lat = parseFloat(location.coordinates.lat);\n    const lon = parseFloat(location.coordinates.lon);\n    if (isNaN(lat) || isNaN(lon)) return;\n\n    const ts = new Date(location.timestamp);\n    if (isNaN(ts.getTime())) return;\n\n    if (!perBike.has(location.bike_id)) {\n      perBike.set(location.bike_id, []);\n    }\n    perBike.get(location.bike_id).push({ bike_id: location.bike_id, lat, lon, ts });\n  });\n\n  // Process each bike's locations\n  perBike.forEach((locations, bike_id) => {\n    const sortedLocations = locations\n      .sort((a, b) => a.ts - b.ts)\n      .slice(-10); // Get the last 10 locations\n\n    if (sortedLocations.length === 0) return;\n\n    const color = getColorFromString(bike_id);\n\n    // Send the polyline for the bike's track\n    const line = sortedLocations.map((p) => [p.lat, p.lon]);\n    node.send({\n      payload: {\n        name: `${bike_id}-track`,\n        line,\n        color,\n        weight: 3,\n        opacity: 0.85,\n        layer: \"bikes\",\n      },\n    });\n\n    // Send trail dots for all but the latest point\n    for (let i = 0; i < sortedLocations.length - 1; i++) {\n      const p = sortedLocations[i];\n      const fillOpacity = 0.2 + (i / Math.max(1, sortedLocations.length - 2)) * 0.5;\n      node.send({\n        payload: {\n          name: `${bike_id}#trail${i}`,\n          lat: p.lat,\n          lon: p.lon,\n          radius: 7,\n          color,\n          fillColor: color,\n          opacity: fillOpacity,\n          fillOpacity,\n          layer: \"bikes\",\n        },\n      });\n    }\n\n    // Send the latest point as a bicycle icon\n    const last = sortedLocations[sortedLocations.length - 1];\n    node.send({\n      payload: {\n        name: `${bike_id}#latest`,\n        lat: last.lat,\n        lon: last.lon,\n        icon: \"bicycle\",\n        iconColor: color,\n        color,\n        layer: \"bikes\",\n      },\n    });\n  });\n\n  // Fit the map to the bounds of the \"bikes\" layer\n  node.send({ payload: { command: \"fit\", layer: \"bikes\" } });\n  return null;\n}\n\n// Call the function with the msg object provided by Node-RED\nprocessBikeLocations(msg);\n",
+        "func": "const PALETTE = [\n  \"#e6194B\", \"#3cb44b\", \"#ffe119\", \"#4363d8\", \"#f58231\",\n  \"#911eb4\", \"#42d4f4\", \"#f032e6\", \"#bfef45\", \"#fabed4\",\n  \"#469990\", \"#dcbeff\", \"#9A6324\", \"#fffac8\", \"#800000\",\n  \"#aaffc3\", \"#808000\", \"#ffd8b1\", \"#000075\", \"#a9a9a9\"\n];\n\nfunction getColorFromString(str) {\n  // FNV-1a\n  let h = 2166136261;\n  for (let i = 0; i < str.length; i++) {\n    h ^= str.charCodeAt(i);\n    h = Math.imul(h, 16777619);\n  }\n  const idx = (h >>> 0) % PALETTE.length;\n  return PALETTE[idx];\n}\n\n// Main function to process the bike locations\nfunction processBikeLocations(msg) {\n  const rows = Array.isArray(msg.payload) ? msg.payload : [];\n  node.send({ payload: { command: { clear: \"bikes\" } } });\n  const perBike = new Map();\n\n  // Group locations by bikeId\n  rows.forEach((location) => {\n    if (!location || !location.bike_id || !location.coordinates) return;\n\n    const lat = parseFloat(location.coordinates.lat);\n    const lon = parseFloat(location.coordinates.lon);\n    if (isNaN(lat) || isNaN(lon)) return;\n\n    const ts = new Date(location.timestamp);\n    if (isNaN(ts.getTime())) return;\n\n    if (!perBike.has(location.bike_id)) {\n      perBike.set(location.bike_id, []);\n    }\n    perBike.get(location.bike_id).push({ bike_id: location.bike_id, lat, lon, ts });\n  });\n\n  // Process each bike's locations\n  perBike.forEach((locations, bike_id) => {\n    const sortedLocations = locations\n      .sort((a, b) => a.ts - b.ts)\n      .slice(-10); // Get the last 10 locations\n\n    if (sortedLocations.length === 0) return;\n\n    const color = getColorFromString(bike_id);\n\n    // Send the polyline for the bike's track\n    const line = sortedLocations.map((p) => [p.lat, p.lon]);\n    node.send({\n      payload: {\n        name: `${bike_id}-track`,\n        line,\n        color,\n        weight: 3,\n        opacity: 0.85,\n        layer: \"bikes\",\n      },\n    });\n\n    // Send trail dots for all but the latest point\n    for (let i = 0; i < sortedLocations.length - 1; i++) {\n      const p = sortedLocations[i];\n      const fillOpacity = 0.2 + (i / Math.max(1, sortedLocations.length - 2)) * 0.5;\n      node.send({\n        payload: {\n          name: `${bike_id}#trail${i}`,\n          lat: p.lat,\n          lon: p.lon,\n          radius: 7,\n          color,\n          fillColor: color,\n          opacity: fillOpacity,\n          fillOpacity,\n          layer: \"bikes\",\n        },\n      });\n    }\n\n    // Send the latest point as a bicycle icon\n    const last = sortedLocations[sortedLocations.length - 1];\n    node.send({\n      payload: {\n        name: `${bike_id}#latest`,\n        lat: last.lat,\n        lon: last.lon,\n        timestamp: last.ts,\n        icon: \"bicycle\",\n        iconColor: color,\n        color,\n        layer: \"bikes\",\n      },\n    });\n  });\n\n  // Fit the map to the bounds of the \"bikes\" layer\n  node.send({ payload: { command: \"fit\", layer: \"bikes\" } });\n  return null;\n}\n\n// Call the function with the msg object provided by Node-RED\nprocessBikeLocations(msg);\n",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
@@ -3373,7 +3373,8 @@
         "y": 240,
         "wires": [
             [
-                "b1920b1a0641aeb4"
+                "b1920b1a0641aeb4",
+                "bfb4ed185f1da052"
             ]
         ]
     },
@@ -3389,6 +3390,13 @@
                 "pt": "flow",
                 "to": "payload",
                 "tot": "msg"
+            },
+            {
+                "t": "set",
+                "p": "selectedBikeId",
+                "pt": "flow",
+                "to": "All",
+                "tot": "str"
             }
         ],
         "action": "",
@@ -3396,7 +3404,7 @@
         "from": "",
         "to": "",
         "reg": false,
-        "x": 280,
+        "x": 260,
         "y": 200,
         "wires": [
             [
@@ -3430,7 +3438,7 @@
         "type": "function",
         "z": "96c3cda21b90f5d3",
         "name": "Filter Data Based on Selection",
-        "func": "// Get the selected bike_id from the dropdown\nconst selectedBikeId = msg.payload;\n\n// Get the original data from flow context\nconst originalData = flow.get(\"originalData\") || [];\n\n// Filter data based on the selected bike_id\nlet filteredData;\nif (selectedBikeId === \"All\") {\n    filteredData = originalData;\n} else {\n    filteredData = originalData.filter(item => item.bike_id === selectedBikeId);\n}\n\n// Send filtered data to the worldmap function\nmsg.payload = filteredData;\nreturn msg;\n",
+        "func": "// Get the selected bike_id from the dropdown\nconst selectedBikeId = msg.payload;\n\n// Remember selection in flow\nflow.set(\"selectedBikeId\", selectedBikeId);\n\n// Get the original data from flow context\nconst originalData = flow.get(\"originalData\") || [];\n\n// Filter data based on the selected bike_id\nlet filteredData;\nif (selectedBikeId === \"All\") {\n    filteredData = originalData;\n} else {\n    filteredData = originalData.filter(item => item.bike_id === selectedBikeId);\n}\n\n// Send filtered data to the worldmap function\nmsg.payload = filteredData;\nreturn msg;\n",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
@@ -3482,6 +3490,47 @@
         "wires": [
             [
                 "bd4c65845b708a95"
+            ]
+        ]
+    },
+    {
+        "id": "ca06aa074656db36",
+        "type": "ui_text",
+        "z": "96c3cda21b90f5d3",
+        "group": "641b5e8937934ab6",
+        "order": 4,
+        "width": 0,
+        "height": 0,
+        "name": "",
+        "label": "Selected Time",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "className": "",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 1180,
+        "y": 280,
+        "wires": []
+    },
+    {
+        "id": "bfb4ed185f1da052",
+        "type": "function",
+        "z": "96c3cda21b90f5d3",
+        "name": "Parse Timestamp",
+        "func": "// Get the slider value (timestamp)\nconst timestamp = msg.payload;\n\n// Convert timestamp to a Date object\nconst date = new Date(timestamp);\n\n// Format the date as a readable string\n// Example: \"YYYY-MM-DD HH:MM:SS\"\nconst formattedDate = date.toISOString().replace('T', ' ').replace(/\\..+/, '');\n\n// Store the formatted date in msg.payload\nmsg.payload = formattedDate;\n\n// Optionally, you can also store the timestamp in msg.timestamp if needed\nmsg.timestamp = timestamp;\n\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 970,
+        "y": 280,
+        "wires": [
+            [
+                "ca06aa074656db36"
             ]
         ]
     }
