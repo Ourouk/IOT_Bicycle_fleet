@@ -38,14 +38,13 @@ Nous ajouterons par ailleurs quelques fonctionnalités intelligentes pour améli
 
 == Proposition
 
-
 Le projet consiste à réaliser trois objets connectés avec des capteurs différents. Ces objets sont les suivants :
-- Un vélo connecté avec un ESP32 compatible LORA, intégrant une gestion des lumières en fonction de la luminosité, un buzzer, un GPS et un lecteur RFID pour prévenir le vol;
-- Une station de sécurité/charge connectée avec un ESP32 compatible WIFI, comprenant une détection de la présence ou non d'un vélo et un système de déverrouillage par badge;
-- Une antenne connectée avec un edge processing basé sur une Raspberry Pi se connectant aux deux autres objets et agissant comme un point relais ou un hub.
+- un vélo connecté avec un ESP32 compatible LoRa, intégrant une gestion des lumières en fonction de la luminosité, un buzzer, un GPS pour prévenir les vols ;
+- une station connectée de sécurité/recharge avec un ESP32 compatible Wi-Fi, comprenant la détection de la présence d'un vélo et un système de déverrouillage par badge ;
+- Une antenne connectée avec un edge processing basé sur une Raspberry Pi, se connectant aux deux autres objets et faisant office de point relais (hub).
 
-Le serveur de gestion sera réalisé en Python avec une base de données MongoDB.
-Un serveur sera présent côté client de notre produit, et un second sera géré de notre côté pour la distribution de mises à jour, le dépannage et la télémétrie.
+Le serveur de gestion sera développé en Python avec une base de données MongoDB.
+Un serveur sera déployé chez le client, et un second sera géré par nos soins pour la distribution des mises à jour, le dépannage et la télémétrie.
 
 Les deux serveurs seraient basés sur Rocky Linux en utilisant une architecture containerisée avec Docker.
 
@@ -181,208 +180,332 @@ Les deux serveurs seraient basés sur Rocky Linux en utilisant une architecture 
 // == ZeroTier
 // == Broker public MQTT
 
+#pagebreak()
+//#set page(width: 297mm, height: 210mm, margin: 0mm) // A4 paysage, sans marge
+#set page(flipped: true, margin: 2.5%) // A4 paysage, sans marge
+#align(center)[
+  #image("IOT.drawio.png", width: 100%, height: 100%, fit: "contain")
+]
+#pagebreak()
+#align(center)[
+  #image("BikeFleetDiagram.png", width: 100%, height: 100%, fit: "contain")
+]
+#pagebreak()
+#set page(flipped: false, margin: auto)
+
+
 = Prix
 == Prix de fabrication
-Selon le site de grovePI dexterIndustries.com, le kit coute 150 \$
+Pour une station :  
+D'après le site Dexter Industries (dexterindustries.com), le kit GrovePi est affiché à 150 \$.
 
-Ce qui est hors de prix.
-+ Raspberry Pi Model 4B 4Gb - 75 \$
-+ Dragino LoRa Adaptator - 30\$
+- Raspberry Pi Model 4B (4 Go) - 75 \$
+- Dragino LoRa Adapter - 30 \$
 
-Par vélo 
-+ Le heltec - 20 \$
-+ Esp32 - 5 \$ 
-+ Adafruit GPS V3 (we have v2) - 30\$
+Par vélo :
 
-Pour un total  de 310 \$
-== Estimation d'un prix plus raisonnable
-Probablement en utilisant un custom pcb, et des esp32 pas de dev. ~2\$ + 0.5\$ 
-Sur aliexpress on retrouve, des antennes Lora pour 5\$
-Les capteurs simple type led etc pour dans les alentours de 1 \$
+- Carte Heltec LoRa - 20 \$
+- ESP32 - 5 \$
+- Adafruit GPS v3 *(nous avons la v2)* - 30 \$
 
-En utilisant des simples esp32 avec le module lora externe. Permettrait de réduire le prix à plus ou +-45\$ le vélo.
+*Total (station avec une borne et un vélo)* : 310 \$ (hors prix du vélo)
 
-Les stations avec la même logique vers 20\$ la station mais en prenant compte du casing etc probablement + dans les 75 voir 100 \$
+== Estimation d'un coût plus raisonnable
 
-L'antenne Lora de base ne nécessite probablement pas une raspberryPi mais une alternative moins chère. Type Orange Pi Zero 15\$
+En disignant un custom PCB et en privilégiant des composants "non dev", on devrait pouvoir baisser les coûts :
+==== Capteurs et affichage 
+En regardant sur aliexpress :
+- PCB sur mesure + ESP32 nus (hors cartes de développement) : ~ 2 \$ + 0.50 \$ par unité
+- Antennes LoRa (AliExpress) : ~ 5 \$
+- Capteurs simples (LED, LDR, buzzer, etc.) : ~ 1 \$ l'unité
 
-Donc en choisissant des composant moins "user friendly" on peut diminuer les coups mais le coups par vélo reste élevé.
+Donc en se fournissant en chine on voit des prix inférieurs.
+==== Vélo (ESP32 + module LoRa externe)
+En optant pour des ESP32 nus et un module LoRa externe, le coût estimé descend à ~ 45 \$ par vélo.
+==== Station
+Avec la même logique d'optimisation, on peut viser ~ 20 \$ pour l'électronique seule, en tenant compte du boîtier, de la fixation et des à-côtés, l'estimation réaliste se situe plutôt entre 75 et 100 \$.
+==== Antenne LoRa
+Une antenne LoRa de base ne nécessite probablement pas une Raspberry Pi ; une alternative plus économique comme une *Orange Pi Zero* peut convenir (~ 15 \$).
+==== Conclusion :   
+En choisissant des composants moins "grand public" (moins plug-and-play), on réduit nettement les *coûts*. Toutefois, le *coût par vélo* demeure significatif.
 
-= Clientelles
-Dans notre exemple initialle, nous parlons des vélos google victimes de nombreux vols car en libre services.
+= Clientèle cible
 
-Donc nous sommes partits sur une clientelle de type universitaires/institutionnelles(villes)/grosses entreprises.
+Dans notre exemple initial, nous avons parlé de vélos en libre-service (type Google), fréquemment victimes de vols. Notre solution vise en priorité des organisations capables de déployer et gérer des flottes :
+
+- Etablissements universitaires et hautes écoles ;
+- Institutions publiques (villes / communes) ;
+- Grandes entreprises disposant.
+
+Avec un exemple chiffré : 
+La HEPL compte près de 10 500 étudiants et 1 200 membres du personnel. Un déploiement initial pourrait couvrir 5 % de cette population, soit 585 vélos répartis sur ses 3 campus :
+
+- Campus 2000 : 195 vélos ;
+- Campus Barbou : 195 vélos ;
+- Campus Gloesner : 195 vélos.
+
+Avec une augmentation annuelle de 2 % du nombre de vélos déployés, la couverture atteindrait 10 % de la population du campus en environ 2 ans (calcul basé sur une progression simple).
+Autres clients potentiels
+D'autres institutions pourraient adopter SmartPedals, comme :
+
+- L'Université de Liège ;
+- Gramme ;
+- Des entreprises locales telles qu'Eurogentec et EVS.
+
 = Consommation électrique
-== Général 
-#tablem[
-  | Appareil | Courant moyen | Puissance (≈5 V) | Énergie/jour | Remarques clés |
-|---|---:|---:|---:|---|
-| Heltec ESP32 LoRa v3  | 140–150 mA | 0,70–0,75 W | 0,017–0,018 kWh | GPS et base ESP32 dominent |
-| ESP32‑WROOM | ~150 mA | ~0,75 W | ~0,018 kWh | Wi‑Fi dominent |
-| Raspberry Pi passerelle  | 740–960 mA | 3,7–4,8 W | 0,089–0,115 kWh | Pi 4B ≈4,5–4,8 W; ventilateur ~1 W |
-]
-== RPI
-#tablem[
-| Sous-ensemble | Courant |
-|---|---:|
-| Carte ESP32 (base) | ~110 mA |
-| LoRa en écoute | +5 mA |
-| LoRa émission (0,1 s/30 s) | +0,4 mA (moyenne) |
-| GPS Adafruit | +22 mA |
-| Capteur de lumière | +1 mA |
-| OLED embarqué | +2 mA |
-| LED (occasionnelle) | +0,2 mA |
-| Relais (ex. 10 % du temps) | +7 mA |
-| Total arrondi | 140–150 mA |
-]
-== ESP32‑WROOM
-#tablem[
-  | Sous-ensemble | Courant |
-|---|---:|
-| ESP32 (Wi‑Fi perpétuel) | ~120 mA |
-| RFID (MFRC522) | +20 mA |
-| LED (1 ON + 1 occasionnelle) | +2,2 mA |
-| Relais (ex. 10 % du temps) | +7 mA |
-| Ultrason (rare) | +0,8 mA |
-| Total arrondi | ~150 mA |
-]
-== Heltech ESP32 LoRa V3
-#tablem[
-  | Variante | Puissance |
-|---|---:|
-| Pi 3B+ (repos typique) | ~1,9 W |
-| Pi 4B (repos typique) | ~2,7 W |
-| AP Wi‑Fi (charge légère) | +0,3–0,7 W |
-| LoRa HAT (Rx) | +0,06 W |
-| Grove LCD (rétroéclairage) | +0,3 W |
-| Ventilateur 5 V | +1,0 W |
-| Autres (GrovePI, boutons, encodeur) | +faible |
-| Total Pi 4B | ~4,5–4,8 W |
-]
-= Coups mensuels
-- Electricité négligeable
-- Difficiles à estimés
-  - Dégradation du matériels
-  - Couts des API
-  - Scaling de l'architecture serveur.
+== Général
 
-A prioris, on pourrait dire que les couts augmenterais de façon linéraires avec les nombre d'utilisateur dans la flotte. Mais l'estimation est entièrement dépendante de la taille de la flotte déployée.
+*Hypothèses :* alimentation 5 V ; courants moyens en fonctionnement (hors pics TX/RX et démarrage).  
+L'énergie/jour est estimée par *E = P \u{00D7} 24 h / 1000 [kWh]* (avec P = U \u{00D7} I).
+
+#tablem[
+  | Appareil | Courant moyen | Puissance (pour 5 V) | Energie / jour | Remarques |
+  |---|---:|---:|---:|---|
+  | Heltec ESP32 LoRa v3 | 140–150 mA | 0,70–0,75 W | 0,0168–0,0180 kWh | Le GPS et l'ESP32 dominent la consommation |
+  | ESP32-WROOM | ~150 mA | ~0,75 W | ~0,0180 kWh | Le Wi-Fi domine la consommation |
+  | Passerelle Raspberry Pi | 740–960 mA | 3,7–4,8 W | 0,0889–0,1152 kWh | Pi 4B ≈ 4,5–4,8 W ; ventilateur jusqu'à ~1 W |
+]
+
+== Noeud vélo (ESP32)
+
+*Hypothèses :* alimentation 5 V ; émission LoRa 0,1 s toutes 30 s (~0,33 % de duty cycle).  
+La puissance se déduit via *P = U \u{00D7} I* (U = 5 V).
+
+#tablem[
+  | Sous-ensemble | Courant moyen |
+  |---|---:|
+  | Carte ESP32 (base) | ~ 110 mA |
+  | LoRa en écoute | + 5 mA |
+  | LoRa en émission *(0,1 s / 30 s, moyenne)* | + 0,4 mA |
+  | GPS Adafruit | + 22 mA |
+  | Capteur de lumière | + 1 mA |
+  | OLED embarqué | + 2 mA |
+  | LED *(occasionnelle)* | + 0,2 mA |
+  | Relais *(~ 10 % du temps)* | + 7 mA |
+  | *Total (arrondi)* | *140–150 mA* |
+]
+
+*Puissance estimée à 5 V :* *~ 0,70–0,75 W*.
+
+== ESP32-WROOM (borne)
+
+*Hypothèses :* Wi-Fi actif en continu ; alimentation 5 V.  
+La puissance se déduit via *P = U × I* (U = 5 V).
+
+#tablem[
+  | Sous-ensemble | Courant moyen |
+  |---|---:|
+  | ESP32 (Wi-Fi continu) | ~ 120 mA |
+  | Lecteur RFID (MFRC522) | + 20 mA |
+  | LED (1 allumée + 1 occasionnelle) | + 2,2 mA |
+  | Relais (~ 10 % du temps) | + 7 mA |
+  | Capteur ultrason *(rare)* | + 0,8 mA |
+  | *Total (arrondi)* | *~ 150 mA* |
+]
+
+*Puissance estimée à 5 V :* *~ 0,75 W*.
+
+== Antenne (station)
+#tablem[
+  | Variante / ajout | Puissance |
+  |---|---:|
+  | Pi 3B+ (repos typique) | ~1,9 W |
+  | Pi 4B (repos typique) | ~2,7 W |
+  | Point d'accès Wi-Fi (charge légère) | +0,3–0,7 W |
+  | LoRa HAT (réception) | +0,06 W |
+  | Grove LCD (rétroéclairage) | +0,3 W |
+  | Ventilateur 5 V | +1,0 W |
+  | Autres (GrovePi, boutons, encodeur) | + faible |
+  | *Total Pi 4B (ex. avec Wi-Fi léger + ventilateur)* | *~4,5–4,8 W* |
+]
 == Notes 
-Ces données sont une aggrégation des consommation moyennes trouvée princpilement sur les site de e-commerces du type https://www.sparkfun.com. Pour une réel estimation un wattometer semblerais plus adapté ou même un oscilloscope pour les mesures les plus fines.
-= Sécurités
-== Les mots de passe hardcoder et faibles
-Nos contre-mesures ont principalement conscisté pour 
-==== Docker
-Utilisation des variables d'environnements pour ne pas hardcoder de passwords directement dans les fichiers et l'utilisation de mots de passe non par défaut.
+Ces données sont une aggrégation des consommation *moyennes* relevées principalement sur des sites d'e-commerce (p. ex. sparkfun.com). Pour une estimation fiable, il est recommandé d'effectuer des mesures réelles :
 
-==== RaspberryPI
-Pi n'utilise pas le mdp raspberry par défaut, mais un mots de passe autres.
+- *Wattmètre* : mesure de la consommation moyenne sous charge représentative ;
+- *Oscilloscope* : capture des transitoires et pics (TX/RX, démarrages, etc.).
 
-==== Embarqué
 
-Au niveau des ESP32, malheureusement les mdp sont hardcoder.
-Pour ce qui est de l'arduino le code étant compilé complique sont accès.
+= Coûts mensuels
 
-Probablement que l'on aurait du utiliser du TLS plutot que du cryptage 100% symétrique. Et apparement les ESP32 ont un système de chiffrement du stockage intégrés. Nous n'avons malheuresement pas enquèter cette piste.
+- Electricité : négligeable à l'échelle d'un noeud.
+- Postes difficiles à estimer a priori :
+  - Usure et maintenance du matériel (capteurs, batteries, boîtiers, cadenas) ;
+  - Coûts d'API et d'abonnements (SMS/e-mail, etc.) ;
+  - Connectivité réseau (éventuellement 4G) ;
+  - Montée en charge de l'architecture serveur (compute, stockage, logs, sauvegardes).
 
-== Insecure Network Service
-=== Lan
-Le réseaux lan connectant les différentes n'est pas sécurité mais est consideré physiquement innacessible.
+*Structure des coûts*  
+- *Fixes* : passerelles, infrastructure de base, supervision, se diluent avec la taille de la flotte (une station pour plusieurs vélos).  
+- *Variables* : matériel par vélo, trafic, stockage, API, croissent *quasi linéairement* avec le nombre d'utilisateurs / vélos.
 
-Une utilisation du 802.1x aurait pu sécurisé ce réseaux lan.
+*A priori*, on peut s'attendre à une progression *approximativement linéaire* des coûts variables avec la taille de la flotte, l'estimation globale reste fortement dépendante du dimensionnement final.
 
-=== WIFI 
-Notre RaspberryPi utilise dans son role d'access Point le wpa2, qui est tjrs sécurisé.
-Une fois de plus une gestion centralisée des authentification type 802.1x par machine serait bien plus résistante.
+= Sécurité
+== Mots de passe hardcodés et faibles
+
+Nos constats et contre-mesures actuelles :
+
+=== Docker
+- Utilisation de *variables d'environnement* pour éviter d'écrire les mots de passe en clair dans les fichiers.
+- Emploi de *mots de passe uniques et non par défaut*
+
+=== Raspberry Pi
+- Le mot de passe par défaut *raspberrypi* n'est pas utilisé ; un *mot de passe distinct et robuste* est défini.
+
+
+=== Embarqué (ESP32 / Arduino)
+- Sur les ESP32, les *secrets sont hardcodés*.
+- Le code Arduino étant compilé, l'accès direct est *plus difficile* : cela *ne constitue pas* une mesure de sécurité.
+
+- *Améliorations recommandées*
+  - Mettre en place *TLS* entre noeuds et serveur, idéalement en *authentification mutuelle (mTLS)* avec *certificats par appareil*.
+ 
+- *Etat du projet*
+  - *Nous aurions dû privilégier TLS plutôt qu'un chiffrement 100 % symétrique partagé.*
+  - *Les ESP32 disposent d'un chiffrement du stockage intégré ; nous n'avons malheureusement pas encore exploré ni mis en place cette piste.*
+
+== Services réseau non sécurisés
+
+=== LAN
+Le réseau LAN reliant les différents équipements n'est pas sécurisé et est considéré comme étant *physiquement inaccessible*. Néanmoins, cette hypothèse reste fragile.  
+L'usage de *802.1X* aurait permis de *sécuriser* davantage ce réseau.
+
+=== Wi-Fi
+La Raspberry Pi, utilisée comme *access point*, est en *WPA2*.  
+Une *gestion centralisée des identités* via *802.1X / RADIUS (WPA2-Enterprise)* - idéalement avec *EAP-TLS* et certificats par appareil serait bien plus sûr.
 
 === Lora 
-Cryptage AES, appliqué malheuresement avec un protocole daté, une utilisation de TLS sur le LoRa serait plus sécurisée.
+Le chiffrement *AES* est actuellement utilisé, mais il est malheureusement appliqué via un protocole *obsolète*. Une solution plus sécurisée consisterait à implémenter TLS sur LoRa, afin de renforcer la protection des échanges.
 
 === Internet
-Toute nos communications circulent sur des tunnels vpn crypté et sécurisé ce qui simplifie et sécurise la communication entre nos serveurs distants.
+Toutes nos communications inter-sites transitent via des *tunnels VPN* chiffrés et authentifiés, ce qui *simplifie* et *sécurise* les échanges entre nos serveurs distants.
 
-== Insecure Ecosystem Interfaces
+== Interfaces d'Ecosystème non sécurisées
+
 === Flask API 
-Double sécurity utilise une clé api, et les routes passent à travers un reverse proxy permettant une vérification centralisée et securisée du chiffrement de nos communication api.
+*Double barrière* en place :
+- Clé *API* requise ;
+- *Reverse proxy* en frontal (terminaison TLS).
 
 === MQTT 
-==== Client_id (outdated)
-Vérification des clients
-==== Authentification/Authorization
-Utilisation de user/password pour pouvoir se subscribe et publish
+==== Identification par client_id
+Filtrage et vérification des *client_id* (avec stratégie de nommage par appareil).  
+*Remarque : à compléter par des contrôles d'authentification plus forts. DEPRECATED*
 
-C'est login donnent des accès partielle via les fichiers ACLs
+==== Authentification / Autorisation
+- *utilisateur / mot de passe* pour *publish* / *subscribe* ;
+- Droits *partiels* appliqués via des *ACL* (topics autorisés / interdits).
+
 ==== TLS
-Utilisation de certificats brokers et clients.
+Utilisation de *certificats* pour le broker et les clients avec le port 8883.
 
-== Use of Insecure or Outdated Components
-=== Utilisation de software à jour.
-Utilisation d'une version de Rocky Linux toujours supporté par red hat et la communauté centos. 
+== Utilisation de Composants Non Sécurisés ou Obsolètes
 
-Ce qui est d'autant plus important qu'elles sont partiellement exposée à internet.
+=== Logiciels à jour
+Nous utilisons une version de *Rocky Linux* toujours *supportée*, recevant des correctifs de sécurité réguliers.  
+C'est d'autant plus important que certaines machines sont *partiellement exposées à Internet*.
 
-=== Utilisation de Docker
-On utilise les dernières versions stables de nos images, et pouvons facilements les mettres à jours avec docker compose,ainsi que des bump de version dans le fichier docker-compose.yml.
+=== NodeRed
+Dashboard *DEPRECATED*, besoin d'être passé à dashboard 2.0 par exemple.
 
-=== RPI
-Le software n'est pas à jour.
+=== Docker
+Nous employons les *dernières versions stables* de nos images et pouvons les *mettre à jour facilement* avec *Docker Compose* (bump de version dans `docker-compose.yml`).  
 
-- Le node-red a des failles de sécurité
-- Debian buster n'est plus supporté 
+=== Raspberry Pi
+Les logiciels *ne sont pas à jour* :
+- *Node-RED* présente des failles de sécurité connues ;
+- *Debian Buster* n'est plus supportée.
 
-La décision de ne pas le mettre à jour vient du fait que dexter Industries ne tiens plus à jour les librairies pour faire fonctionné le grovePI sur les Raspian moderne.
+La décision de ne pas mettre à jour vient du fait que *Dexter Industries* ne tient plus à jour les *bibliothèques GrovePi* pour les versions modernes de *Raspbian*.
 
-==== Mitigation
-La raspberry n'a aucun accès à internet. Et ne peux communiquer que via le réseaux filaire ou son wifi sécurisé avec l'extérieur.
+==== Atténuation actuelle
+La *Raspberry Pi* n'a *aucun accès direct à Internet* et ne peut communiquer vers l'extérieur que via le *réseau filaire* ou son *Wi-Fi sécurisé*.
 
-== Insufficient Privacy Protection
-Notre concept de base, voulait garder toutes les données privée relative des utilisateurs sur les serveurs du client. Et à des flush automatiques des base de données (tous les 7 jours pour les localisation).
-Cependant, nous avons dû ajouter un système de backup des données sur un serveur L3, pour pouvoir offrir des métriques publiques. Mais celle-ci sont anonymisée mais tout de même nettoyées tous les 30 jours.
+== Protection Insuffisante de la Vie Privée
+Notre principe de base était de *conserver toutes les données personnelles* des utilisateurs sur les *serveurs du client*, avec des *purges automatiques* des bases (p. ex. *7 jours* pour les données de localisation). (*RGPD*)
 
-Nous notons qu'avec plus de temps, un nettoyage plus profonds des logs devrait être implémentés. Même si ce ne sont pas des données privée.
+Cependant, nous avons ajouté une *sauvegarde* sur un *serveur L3* afin de produire des *métriques* qui font l'objet d'un *nettoyage tous les 30 jours*.
 
-== Insecure Data Transfer and Storage
-Notre design n'as pas réelement de transfert non sécurisée à cause du chiffrement.
+== Transfert et Stockage de Données Non Sécurisés
+Côté *transit*, notre architecture *n'implique pas de transferts non sécurisés* : les communications sont *chiffrées* (VPN/TLS).
 
-Par contre au niveau stockage, nous ne cryptons pas sur disque les base de données celà pour être effectivement une fonctionnalités.
+En *stockage*, les *bases de données ne sont pas chiffrées sur disque* pour l'instant. Des mesures d'*accès système* sont en place : un *seul utilisateur Linux* dispose des droits nécessaires pour les accès distants, et l'*accès root est désactivé* par défaut.
 
-Il est à noté que c'est base de données sont quand même sécurisée dans le sens que un seul utilisateur Linux y a accès (pour les remotes access) et pour ce qui est de l'accès root il est bloqué par défaut.
+== Absence de Gestion des Appareils
 
-== Lack of Device Management
+=== Raspberry Pi
+Accès *SSH* via la *Layer 2* : un *bastion (jump host)* est requis, une fois connecté à la L2, des accès *SSH* et *VNC* sont disponibles.
 
-=== RaspberryPi
-La RPI a un accès ssh à la layer 2, type bastion host est requis mais une fois obtenu connecté sur la L2, un accès VNC et SSH est disponibles.
-
-=== Layer 2 
-Permet un accès ssh depuis Internet. Le client peut décider de bloqué le port 22 au niveau de leur firewall nous gardons via ZeroTier.
+=== Layer 2
+Un accès *SSH depuis Internet* est possible. Si le client *bloque le port 22* sur le firewall nous *conservons l'administration* via *ZeroTier*.
 
 === Layer 3
-Accès disponibles via internet, et le réseau SmartPedals
+Accès disponibles via *Internet* et via le *réseau SmartPedals* (tunnels chiffrés).
 
 === ESP32
-Malheuresement les esp32 n'ont pas de fonctionnalités simmilaires.
-J'ai lu que des Système d'OTA existait mais nous n'avons pas pousser les recherches.
-
-== Insecure Default Settings
-Les paramètres par défauts de notre architectures sont plutot sécurisé. Les utilisateurs doivent juste faire attention à bien modifié les mots de passe.
-== Lack of Physical Hardening
-=== RaspberryPi
-Notre objectif dans une architecture non prototype serait de la placer en hauteur sur un piquet pour accroitre sa portée.
-
-Et cela donnerait aussi une meilleur sécurité.
-
-Ici notre prototype n'est pas sécurisé physiquement
-=== Esp32 sur vélo
-L'utilisation d'un devkit avec les pin de debugging accessible et un boitié pas intégré au cadre du vélo ne donne pas une sécuritée satisfaisantes, nous en avons conscience.
-
-Cependant une réduction de la taille de l'appareil en utilisant un pcb personnalisé permettrait de faire un boitié adapté
-
-=== Esp32 cadenas
-
-Notre prototype en 3D donne une idée de à quoi pourrait ressembler le cadenas, mais il faudrait utilisé de l'acier épais et probablement bétonné le cadenas au niveau de la station.
-
-=== Les serveurs
-Il pourraient aisément être placé dans des data-center classiques dont cet aspet physique est moins problématiques.
+Pas de fonctionnalité similaire : les ESP32 *ne disposent pas* actuellement d'un mécanisme d'*OTA* déployé.  
+Nous savons que des solutions d'OTA existent, mais nous *n'avons pas approfondi* ni mis en place cette piste.
 
 
-= Note d'amélioration
+== Paramètres par défaut non sécurisés
+
+Les paramètres par défaut de notre *architecture* sont plutôt *sécurisés*.  
+Les utilisateurs doivent toutefois *modifier immédiatement* tous les mots de passe initiaux.
+
+*Bonnes pratiques complémentaires :*
+- Désactiver les comptes et identifiants par défaut ;
+- Régénérer les secrets/clefs au déploiement ;
+- Restreindre les ports/services exposés.
+
+== Durcissement physique insuffisant
+
+=== Raspberry Pi
+En production, la passerelle serait idéalement *placée en hauteur* (mât/piquet) pour *accroître la portée* et *réduire les manipulations non autorisées*.  
+Notre *prototype* actuel *n'est pas sécurisé physiquement*.
+
+*Pistes de renforcement :* boîtier IP65+, vis/écrous anti-effraction, scellement, fixation antivol, alimentation protégée.
+
+=== ESP32 sur vélo
+L'usage d'un *devkit* avec *broches de debug accessibles* et un *boîtier non intégré* au cadre n'offre pas une sécurité suffisante.  
+Un *PCB personnalisé* permettrait un *boîtier adapté*, intégré au cadre.
+
+*Pistes de renforcement :* scellement (résine/potting), visserie inviolable, détection d'ouverture/choc.
+
+=== ESP32 cadenas
+Le *prototype 3D* illustre le concept. En production, il faudrait utiliser un *acier épais* (anse blindée) et *sceller* le cadenas au niveau de la station (béton/platine métallique).
+
+=== Serveurs
+Ils peuvent être placés dans des *data centers* classiques, où l'accès est déjà restrein et géré avec une copie sur le *cloud* des données sensibles.
+
+
+= Conclusion
+Pour maximiser notre apprentissage et sortir de notre zone de confort, nous avons inversé nos rôles habituels. Ainsi, chacun d'entre nous a pris en charge la partie du projet qu'il maîtrise le moins. Cette approche nous a permis, d'une part d'élargir nos compétences respectives, et d'autre part d'aborder des défis avec un regard nouveau, favorisant la collaboration et la compréhension du système dans son ensemble (ce qui ne nous a tout de même pas empêché d'avoir des soucis de communication en interne).
+
+== Martin
+
+Ce projet m'a permis de passer de la théorie à la pratique, surtout côté *DevOps* et *administration système*.
+
+- *Docker / Compose.* Je suis passé d'une compréhension superficielle (une fois il y a longtemps pour OS avec guacamole) à une utilisation concrète : images, réseaux, volumes. La containerisation de *ZeroTier* (initialement prévue en service natif sur Rocky Linux 10) m'a montré qu'on peut contourner l'absence de paquets tout en gardant l'accès aux interfaces réseau.
+- *Caddy (reverse proxy).* Objectif : donner des *URL claires* au lieu d'IP:port. La bascule *HTTP vers HTTPS* a révélé pas mal de pièges (redirections, certificats). J'ai touché *OpenSSL* et je pense avoir mieux compris les histoires de *Common Name (CN)* en environnement conteneurisé. Parfois, le problème vient de la *configuration*, pas du code.
+- *MongoDB.* Utilisation d'*init scripts* et d'*index TTL* pour maîtriser la rétention (utile pour le *RGPD*). Ça évite d'alourdir la base inutilement.
+- *Flask + front.* Première vraie intégration web (HTML, routes). J'ai corrigé des erreurs de logique (ex. mauvais usage de `render_template` au lieu de *redirections* HTTP). Les *SSE* ont permis un rafraîchissement en direct (mais montrent leurs limites quand les messages arrivent en rafale : à optimiser).
+- *Traitement de données.* *JSONPath* m'a aidé à formater proprement les messages *MQTT*, particulièrement utile avec l'application mobile : Iot MQTT Panel.
+
+En somme, j’ai renforcé mes bases et gagné en confiance d'utilisation : je sais déployer une pile conteneurisée, diagnostiquer des soucis de réseau/certificats, structurer la donnée (TTL, init scripts).
+
+== Andrea
+
+Je me suis concentré sur la partie hardware et j’ai principalement renforcé mes compétences sur :
+
+- *Développement embarqué* : ESP32, Arduino et MicroPython.
+- *Débogage de capteurs* ; compréhension des protocoles UART et I²C, ainsi que des capteurs analogiques et numériques.
+- *Compréhension plus approfondie des pilotes Linux*, utilisation de dmesg et gestion des permissions via les groupes Unix.
+- Premier contact avec *JavaScript et Node.js* ; gestion des dépendances NPM dans Node‑RED.
+- Administration de base de *systemd* (unités, services).
+- Utilisation plus fluide de la *hiérarchie de configuration* sous /etc/.
+- *Configuration et routage réseau sous Linux* ; mise en place d’un point d’accès Wi‑Fi avec hostapd et dnsmasq (plus simple à prendre en main que dhcpd).
+
+Frustrations rencontrées :
+
+- Certains aspects du projet ont représenté des défis stimulants, mais parfois exigeants. D’une part, la volonté de donner du sens à chaque étape, combinée à une liste de tâches ambitieuse, a parfois rendu le développement plus complexe que prévu. Cela a nécessité un équilibre délicat entre l’autonomie créative et le respect des contraintes techniques et organisationnelles.
+- L’absence de support de GrovePi sur les OS plus récents complique l’utilisation de Node‑RED sous Raspberry Pi OS (ex‑Raspbian).
